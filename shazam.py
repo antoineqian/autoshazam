@@ -19,13 +19,13 @@ filename, interval = args.filename, args.interval * 60 * 1000
 
 async def main():
     shazam = Shazam()
-    seg = AudioSegment.from_file("forestDriveWest_Dualism.mp3")
+    seg = AudioSegment.from_file(filename)
     dur = seg.duration_seconds
     
     for i in range(ceil(dur * 1000 / interval)):
         part = seg[i*interval:(i+1)*interval]
         res = await shazam.recognize_song(part)
-        print(f"{i*interval*1000}")
+        print(f"{i*interval/60} min")
         if res['matches']:
             print(f"The song was recognized to be {res['track']['title']} :  {res['track']['subtitle']}")
         else:
