@@ -23,17 +23,21 @@ async def main():
     dur = seg.duration_seconds
     
     iters = ceil(dur * 1000 / interval)
+
     async def shazam_at(i):
         part = seg[i*interval:(i+1)*interval]
-        res = await shazam.recognize_song(part)
-        print(f"{i*interval/60} min")
-        if res['matches']:
-            print(f"The song was recognized to be {res['track']['title']} :  {res['track']['subtitle']}")
-        else:
-            print("No match")
+        ret = await shazam.recognize_song(part)
+        if ret['matches']:
+            return i, ret['track']        
 
     coros = [shazam_at(i) for i in range(iters)]
-    await asyncio.gather(*coros)
+    results = await asyncio.gather(*coros)
+    for i, track in sorted(results):
+        print(f"The song was recognized to be {track['title']} :  {track['subtitle']} at {i*interval/60/1000} min")
+
+    # print(sorresults)
+    # print(f"The song was recognized to be {res['track']['title']} :  {res['track']['subtitle']}")
+
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
