@@ -35,9 +35,6 @@ async def main():
     for i, track in sorted(results):
         print(f"The song was recognized to be {track['title']} :  {track['subtitle']} at {i*interval/60/1000} min")
 
-    # print(sorresults)
-    # print(f"The song was recognized to be {res['track']['title']} :  {res['track']['subtitle']}")
-
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
