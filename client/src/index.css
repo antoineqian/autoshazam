@@ -1,0 +1,97 @@
+body {
+  margin:0;
+  width: 100%;
+  padding: 0;
+  background-color: rgb(226, 241, 255);
+  display: flex;
+  justify-content: center;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.file-upload-form {
+  max-width: 400px;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+.container {
+  /* max-width: 900px; */
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.collection-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.collection-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.track-info {
+  flex-grow: 1;
+}
+
+.title {
+  font-weight: bold;
+}
+
+.subtitle {
+  color: #555;
+}
+
+.url {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.9rem;
+  color: #3498db;
+}
+
+.delete-icon {
+  color: #e74c3c;
+  cursor: pointer;
+}
+
+.icon {
+  width: 16px;
+  margin: 5px;
+}
+
+.button-container {
+  justify-content: right;
+}
