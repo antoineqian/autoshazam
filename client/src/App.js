@@ -9,8 +9,8 @@ function App() {
   const [tracks, setTracks] = useState([])
 
   const deleteTrack = i => {
-    const newNoteList = tracks.filter((note, index)=>{
-      return index !== i
+    const newNoteList = tracks.filter((track)=>{
+      return track.position !== i
     })
     setTracks(newNoteList)    
   }

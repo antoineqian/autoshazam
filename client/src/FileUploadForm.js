@@ -3,7 +3,7 @@ import axios from 'axios'
 
 const FileUploadForm = ({setTracks}) => {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [integerValue, setIntegerValue] = useState('');
+  const [intervalValue, setIntervalValue] = useState(1);
   const [isValid, setIsValid] = useState(true);
 
   const handleFileChange = (event) => {
@@ -14,8 +14,8 @@ const FileUploadForm = ({setTracks}) => {
   const handleInputChange = (event) => {
     const value = event.target.value; 
 
-    setIntegerValue(value);
-    // Check if the entered value is a valid integer
+    setIntervalValue(value);
+    // Check if the entered value is a valid interval
     setIsValid(/^\d+$/.test(value));
   };
 
@@ -32,6 +32,7 @@ const FileUploadForm = ({setTracks}) => {
 
     const formData = new FormData();
     formData.append('file', selectedFile);
+    formData.append('interval', parseInt(intervalValue));
 
     const response = await axios.post(
       `http://localhost:8000/detect`,
@@ -56,10 +57,10 @@ const FileUploadForm = ({setTracks}) => {
       />
       <input
         type="text"
-        id="integerInput"
-        value={integerValue}
+        id="intervalInput"
+        value={intervalValue}
         onChange={handleInputChange}
-        placeholder="Enter an integer"
+        placeholder="Enter an interval"
         style={{ borderColor: isValid ? 'inherit' : 'red' }}
       />
       <button onClick={handleUpload}>Upload</button>

@@ -3,21 +3,20 @@ from shazamio import Shazam
 from pydub import AudioSegment
 from math import ceil
 
-import argparse
-
-def check_positive(value):
-    ivalue = int(value)
-    if ivalue <= 0:
-        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
-    return ivalue
 
 async def do_shazam(shazam, part, i):
     ret = await shazam.recognize_song(part)
-    if ret['matches']:
-        return i, ret['track'] 
+    if ret is not None and 'track' in ret and ret['track'] is not None:
+        track_info = {
+            'position': i,
+            'title': ret['track']['title'],
+            'subtitle': ret['track']['subtitle'],
+            'url': ret['track']['url'],
+        }
+        return track_info 
 
-async def shazam_all(filename):
-    interval = 3 * 60 * 1000
+async def shazam_all(filename, interval):
+    interval = interval * 60 * 1000
     shazam = Shazam()
     seg = AudioSegment.from_file(filename)
     dur = seg.duration_seconds
@@ -26,8 +25,14 @@ async def shazam_all(filename):
     
     coros = [do_shazam(shazam, seg[i*interval:(i+1)*interval], i) for i in range(iters)]
     recognized_tracks = await asyncio.gather(*coros)
-    for i, track in sorted(recognized_tracks):
-        print(f"The song was recognized to be {track['title']} :  {track['subtitle']} at {i*interval/60/1000} min")
+    recognized_tracks = list(filter(lambda item: item is not None, recognized_tracks))
+
+
+    # print(recognized_tracks)
+    print('Gathered')
+    # print(recognized_tracks.keys())
+    # for i, track in sorted(recognized_tracks.items()):
+    #     print(f"The song was recognized to be {track['title']} :  {track['subtitle']} at {i*interval/60/1000} min")
     return recognized_tracks
 
 # async def main():
