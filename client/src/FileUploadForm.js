@@ -19,6 +19,34 @@ const FileUploadForm = ({setTracks}) => {
     setIsValid(/^\d+$/.test(value));
   };
 
+  // const handleUpload = async () => {
+  //   // Handle file upload logic here
+  //   if (!selectedFile){
+  //     console.log("No file selected")
+  //   }
+  //   if(!isValid){
+  //     console.log("Invalid input")
+  //   }
+
+  //   console.log('Uploading file:', selectedFile);
+
+  //   const formData = new FormData();
+  //   formData.append('file', selectedFile);
+  //   formData.append('interval', parseInt(intervalValue));
+
+  //   const response = await axios.post(
+  //     `http://localhost:8000/detect`,
+  //     formData,
+  //     { headers: {'Content-Type': 'multipart/form-data'}})
+
+//     if (response.status === 200) {
+//       console.log('Detection done')
+//       console.log(response)
+        
+  //       setTracks(response.data)
+  //   }
+  // };
+
   const handleUpload = async () => {
     // Handle file upload logic here
     if (!selectedFile){
@@ -28,24 +56,23 @@ const FileUploadForm = ({setTracks}) => {
       console.log("Invalid input")
     }
 
-    console.log('Uploading file:', selectedFile);
+    var ws = new WebSocket("ws://localhost:8000/detect")
+    ws.onmessage = function(event) {
+      console.log(event.data)
+  };
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('interval', parseInt(intervalValue));
-
-    const response = await axios.post(
-      `http://localhost:8000/detect`,
+  console.log('Uploading file:', selectedFile);
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  formData.append('interval', parseInt(intervalValue));
+  const response = await axios.post(
+      `http://localhost:8000/process`,
       formData,
       { headers: {'Content-Type': 'multipart/form-data'}})
 
-      if (response.status === 200) {
-        console.log('Detection done')
-        console.log(response)
-        
-        setTracks(response.data)
-    }
-  };
+};
+
+
 
   return (
     <div className="file-upload-form">
