@@ -1,11 +1,11 @@
 import React from 'react'
-import shazamIcon from './shazam.svg'; // Adjust the path accordingly
-import deleteIcon from './delete.svg'; // Adjust the path accordingly
+import shazamIcon from './shazam.svg'; 
+import deleteIcon from './delete.svg'; 
 
 const ListTracks = ({ tracks, deleteTrack }) => {
-  console.log('Listtracks')  
   console.log(tracks)
-    const trackList = tracks ? tracks.map((track)=>(
+  const sortedTracks = [...tracks].sort((a, b) => a.position - b.position);
+    const trackList = sortedTracks ? sortedTracks.map((track)=>(
     <div key={track.position}> 
         <li className="collection-item">
             <span className="title">{track.title} - {track.subtitle}</span>

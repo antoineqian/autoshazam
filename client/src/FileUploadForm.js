@@ -32,8 +32,6 @@ const FileUploadForm = ({tracks, addTrack}) => {
 
     var ws = new WebSocket("ws://localhost:8000/detect")
     ws.onmessage = function(event) {
-      console.log(`Receoved message. Length is ${tracks.length}`)
-      console.log(JSON.parse(event.data))
       addTrack(JSON.parse(event.data))
   };
 
@@ -41,7 +39,7 @@ const FileUploadForm = ({tracks, addTrack}) => {
   const formData = new FormData();
   formData.append('file', selectedFile);
   formData.append('interval', parseInt(intervalValue));
-  const response = await axios.post(
+  await axios.post(
       `http://localhost:8000/process`,
       formData,
       { headers: {'Content-Type': 'multipart/form-data'}})
@@ -55,6 +53,7 @@ const FileUploadForm = ({tracks, addTrack}) => {
         type="file"
         accept=".mp3, .wav"  // Adjust file types as needed
         onChange={handleFileChange}
+        required
       />
       <input
         type="text"

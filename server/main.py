@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Form, WebSocket
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from djshazam import shazam_all
 from fastapi.responses import HTMLResponse
 import asyncio
 from shazamio import Shazam
@@ -44,14 +43,13 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-    except WebSocketDisconnect:
+    except:
         manager.disconnect()
 
 @app.post("/process")
 async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...)):
     print(f"Processing file {file.filename} with interval {interval}")
     try:
-        print(file.filename, file.content_type)
         contents = file.file.read()
         with open(file.filename, 'wb') as f:
             f.write(contents)
@@ -67,6 +65,7 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
 
 
 async def do_shazam(shazam, part, i):
+    print('do_shazam')
     ret = await shazam.recognize_song(part)
     if ret is not None and 'track' in ret and ret['track'] is not None:
         track_info = {
@@ -75,6 +74,7 @@ async def do_shazam(shazam, part, i):
             'subtitle': ret['track']['subtitle'],
             'url': ret['track']['url'],
         }
+        print('finished shazaming')
         await manager.send_json(track_info)
         return track_info 
 
@@ -95,20 +95,3 @@ async def shazam_all(filename, interval):
 @app.get("/")
 async def root():
     return {"message": "Welcome to DJ Shazam"}
-
-@app.post("/detect")
-async def upload_file_and_detect(file: UploadFile=File(...), interval: int=Form(...)):
-    try:
-        print(file.filename, file.content_type)
-        contents = file.file.read()
-        with open(file.filename, 'wb') as f:
-            f.write(contents)
-        results = await shazam_all(file.filename, interval)
-
-    except Exception as e:
-        print(e)
-        return {"message": "There was an error uploading the file", "e": e}
-    finally:
-        file.file.close()
-    return results
-
