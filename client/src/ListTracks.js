@@ -3,7 +3,8 @@ import shazamIcon from './shazam.svg'; // Adjust the path accordingly
 import deleteIcon from './delete.svg'; // Adjust the path accordingly
 
 const ListTracks = ({ tracks, deleteTrack }) => {
-    console.log(tracks)
+  console.log('Listtracks')  
+  console.log(tracks)
     const trackList = tracks ? tracks.map((track)=>(
     <div key={track.position}> 
         <li className="collection-item">

@@ -9,15 +9,26 @@ function App() {
   const [tracks, setTracks] = useState([])
 
   const deleteTrack = i => {
-    const newNoteList = tracks.filter((track)=>{
-      return track.position !== i
-    })
-    setTracks(newNoteList)    
+    setTracks(prevTracks => {
+      const newTrackList = tracks.filter((track)=>{
+        return track.position !== i
+      })  
+      return newTrackList;
+    });
   }
+
+  const addTrack = track => {
+    setTracks(prevTracks => {
+      const newTrackList = [...prevTracks, track];
+      console.log(`Track added. Current length of tracks is ${newTrackList.length}`);
+      return newTrackList;
+    });
+  };
+  
   return (
     <div>
       <ListTracks tracks={tracks} deleteTrack={deleteTrack} />
-      <FileUploadForm setTracks={setTracks}/>
+      <FileUploadForm tracks={tracks} addTrack={addTrack}/>
     </div>
   );
 }

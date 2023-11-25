@@ -27,16 +27,5 @@ async def shazam_all(filename, interval):
     recognized_tracks = await asyncio.gather(*coros)
     recognized_tracks = list(filter(lambda item: item is not None, recognized_tracks))
 
-
-    # print(recognized_tracks)
     print('Gathered')
-    # print(recognized_tracks.keys())
-    # for i, track in sorted(recognized_tracks.items()):
-    #     print(f"The song was recognized to be {track['title']} :  {track['subtitle']} at {i*interval/60/1000} min")
     return recognized_tracks
-
-# async def main():
-#     await shazam_all(filename)
-
-# loop = asyncio.get_event_loop()
-# loop.run_until_complete(main())
