@@ -10,9 +10,10 @@ npm run start
 
 ## Run the server
 
-First install the virtual environment from requirements.txt, activate it then run
-
-`python3 -m uvicorn main:app --reload`
+`
+pip3 install fastapi uvicorn python-multipart websockets shazamio
+python3 -m uvicorn main:app --reload
+`
 
 # Future updates
 - Persistent results
