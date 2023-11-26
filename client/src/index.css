@@ -26,15 +26,42 @@ input {
   margin-bottom: 10px;
 }
 
-button {
-  display: block;
+.submit-btn {
   width: 100%;
-  padding: 10px;
-  background-color: #4caf50;
-  color: #fff;
+  font-family: 'Anek Malayalam', sans-serif;
+  background: #4caf50;
   border: none;
-  border-radius: 4px;
+  outline: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  min-width: 200px;
+  min-height: 36px;
   cursor: pointer;
+  outline: none;
+}
+
+.submit-btn:disabled {
+  background: #e7e8e9;
+  color: #9fa3a9;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation-name: spin;
+  animation-duration: 500ms;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 button:hover {

@@ -75,7 +75,10 @@ async def run_task(shazam, part, i):
             'url': ret['track']['url'],
 
         }
-        # track['hub']
+        actions = ret['track']['hub']['actions']
+        for action in actions:
+            if 'uri' in action:
+                track_info['uri'] = action['uri']
         print('finished shazaming')
         await manager.send_json(track_info)
         # return track_info 

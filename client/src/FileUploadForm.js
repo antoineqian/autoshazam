@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios'
+import LoadingButton from './LoadingButton'
 
 const FileUploadForm = ({tracks, addTrack}) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [intervalValue, setIntervalValue] = useState(1);
   const [isValid, setIsValid] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -22,16 +24,17 @@ const FileUploadForm = ({tracks, addTrack}) => {
   
 
   const handleUpload = async () => {
-    // Handle file upload logic here
-    if (!selectedFile){
-      console.log("No file selected")
-    }
-    if(!isValid){
-      console.log("Invalid input")
-    }
+  // Handle file upload logic here
+  if (!selectedFile){
+    console.log("No file selected")
+  }
+  if(!isValid){
+    console.log("Invalid input")
+  }
+  setLoading(true);
 
-    var ws = new WebSocket("ws://localhost:8000/detect")
-    ws.onmessage = function(event) {
+  var ws = new WebSocket("ws://localhost:8000/detect")
+  ws.onmessage = function(event) {
       addTrack(JSON.parse(event.data))
   };
 
@@ -43,6 +46,7 @@ const FileUploadForm = ({tracks, addTrack}) => {
       `http://localhost:8000/process`,
       formData,
       { headers: {'Content-Type': 'multipart/form-data'}})
+  setLoading(false);
 
 };
 
@@ -53,6 +57,7 @@ const FileUploadForm = ({tracks, addTrack}) => {
         type="file"
         accept=".mp3, .wav"  // Adjust file types as needed
         onChange={handleFileChange}
+        // multiple="false"
         required
       />
       <input
@@ -63,7 +68,8 @@ const FileUploadForm = ({tracks, addTrack}) => {
         placeholder="Enter an interval"
         style={{ borderColor: isValid ? 'inherit' : 'red' }}
       />
-      <button onClick={handleUpload}>Upload</button>
+      <LoadingButton text="Submit" onSubmit={handleUpload} loading={loading} />
+      {/* <button className={loading ? 'button--loading::after ' : ''} type="submit" onClick={handleUpload}>Upload</button> */}
     </div>
   );
 };

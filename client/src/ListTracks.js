@@ -9,6 +9,9 @@ const ListTracks = ({ tracks, deleteTrack }) => {
     <div key={track.position}> 
         <li className="collection-item">
             <span className="title">{track.title} - {track.subtitle}</span>
+            <audio controls="controls" src={track.uri} type="audio/m4a">
+              Your browser does not support the audio element.
+            </audio>
             <div className="button-container">
               <a href={track.url} target="_blank" rel="noopener noreferrer">
                 <img src={shazamIcon} alt="Shazam Icon" className="icon"/>
