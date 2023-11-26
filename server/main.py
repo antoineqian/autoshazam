@@ -65,11 +65,11 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
         file.file.close()
     return {"message": "Done"}
 
-async def run_task(shazam, part, i): 
+async def run_task(shazam, part, position): 
     ret = await shazam.recognize_song(part)
     if ret is not None and 'track' in ret and ret['track'] is not None:
         track_info = {
-            'position': i,
+            'position': position / 60 / 1000,
             'title': ret['track']['title'],
             'subtitle': ret['track']['subtitle'],
             'url': ret['track']['url'],
@@ -79,7 +79,7 @@ async def run_task(shazam, part, i):
         for action in actions:
             if 'uri' in action:
                 track_info['uri'] = action['uri']
-        print('finished shazaming')
+        # print(ret)
         await manager.send_json(track_info)
         # return track_info 
 
@@ -95,7 +95,7 @@ def run_all_tasks(filename, interval):
     for i in range(iters):
         thread = threading.Thread(
             target=asyncio.run, 
-            args=(run_task(shazam, seg[i*interval:(i+1)*interval], i),))
+            args=(run_task(shazam, seg[i*interval:(i+1)*interval], i*interval),))
         threads.append(thread)
         thread.start()
 

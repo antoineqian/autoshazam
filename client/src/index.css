@@ -64,7 +64,7 @@ input {
   }
 }
 
-button:hover {
+.submit-btn:hover {
   background-color: #45a049;
 }
 
@@ -120,5 +120,23 @@ button:hover {
 }
 
 .button-container {
+  display: flex;
   justify-content: right;
+  /* align-items: center; */
+}
+
+.playbutton {
+  border: none;
+  cursor: pointer;
+  background-color: white;
+  box-sizing: border-box;
+  margin-left:0;
+  margin-right:0;
+  /* position: relative; */
+  /* left: 50%; */
+  /* transform: translate(-50%, -50%), */
+}
+.track-info{
+  display: flex;
+  flex-direction: column;
 }

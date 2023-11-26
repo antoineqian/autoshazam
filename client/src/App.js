@@ -20,7 +20,6 @@ function App() {
   const addTrack = track => {
     setTracks(prevTracks => {
       const newTrackList = [...prevTracks, track];
-      console.log(`Track added. Current length of tracks is ${newTrackList.length}`);
       return newTrackList;
     });
   };
