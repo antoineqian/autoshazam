@@ -7,7 +7,7 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import AudioPlayer from './AudioPlayer';
 
-const ListTracks = ({ tracks, deleteTrack }) => {
+const ListTracks = ({ tracks, deleteTrack, reset}) => {
   
   const copyToClipBoard = (textToCopy) => {
       copy(textToCopy);
@@ -59,13 +59,17 @@ const ListTracks = ({ tracks, deleteTrack }) => {
   </div>)) : null
 
     return (
+      // sortedTracks.length > 0 ?(
         <div className='container'>
             <h3>Results</h3>
             <p>{sortedTracks.length} tracks have been detected </p>
+              <button className="btn reset-btn" onClick={e=>reset()}>
+              Reset </button>
                 <ul className="collection">
                     {trackList}
                 </ul>
         </div>
+        // ) : <div></div>
     )
 }
 

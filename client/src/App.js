@@ -23,10 +23,17 @@ function App() {
       return newTrackList;
     });
   };
+
+  const reset = () => {
+    setTracks(prevTracks => {
+      const newTrackList = [];
+      return newTrackList;
+    });
+  };
   
   return (
     <div>
-      <ListTracks tracks={tracks} deleteTrack={deleteTrack} />
+      <ListTracks tracks={tracks} deleteTrack={deleteTrack} reset={reset}/>
       <FileUploadForm tracks={tracks} addTrack={addTrack}/>
     </div>
   );
