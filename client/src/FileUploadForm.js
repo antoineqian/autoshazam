@@ -21,7 +21,12 @@ const FileUploadForm = ({tracks, addTrack}) => {
     setIsValid(/^\d+$/.test(value));
   };
 
-  
+  const [inputReset, setInputReset] = useState('')
+  // Assigining a new key will force re-render
+  const resetInput = () => {
+    let randomString = Math.random().toString(36);
+    setInputReset(randomString)
+  };
 
   const handleUpload = async () => {
   // Handle file upload logic here
@@ -52,11 +57,6 @@ const FileUploadForm = ({tracks, addTrack}) => {
   resetInput()
   };
 
-  const [inputReset, setInputReset] = useState('')
-  const resetInput = () => {
-    let randomString = Math.random().toString(36);
-    setInputReset(randomString)
-  };
 
   return (
     <div className="file-upload-form">
