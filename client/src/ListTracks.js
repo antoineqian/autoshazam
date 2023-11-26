@@ -1,9 +1,18 @@
 import React from 'react'
 import shazamIcon from './shazam.svg'; 
 import deleteIcon from './delete.svg'; 
+import copyIcon from './copy.svg'; 
+import copy from 'clipboard-copy';
+import toast, { Toaster } from 'react-hot-toast';
+
 import AudioPlayer from './AudioPlayer';
 
 const ListTracks = ({ tracks, deleteTrack }) => {
+  
+  const copyToClipBoard = (textToCopy) => {
+      copy(textToCopy);
+      toast('Successfully copied!')
+    };
 
   function removeDuplicates(data, uniqueKeys) {
     const seen = new Set();
@@ -30,7 +39,7 @@ const ListTracks = ({ tracks, deleteTrack }) => {
   <div key={track.position}> 
       <li className="collection-item">
         <div className='track-info'>
-          <span className="title">{track.title} - {track.subtitle}  </span><br></br>
+          <span className="title">{track.subtitle} - {track.title}  </span><br></br>
           <span className='subtitle'>  {track.position} min</span>
         </div>
           <div className="button-container">
@@ -41,6 +50,10 @@ const ListTracks = ({ tracks, deleteTrack }) => {
             <a href="#!" onClick={e=>deleteTrack(track.position)} className="delete-icon" title="Remove from list">
               <img src={deleteIcon} alt="Delete Icon" className="icon"/>
             </a>
+            <a href="#!" onClick={e=>copyToClipBoard(`${track.subtitle} ${track.title}`)} title="Copy track info to clipboard">
+              <img src={copyIcon} alt="Copy Icon" className="icon"/>
+            </a>
+            <Toaster />
           </div>
       </li>
   </div>)) : null
