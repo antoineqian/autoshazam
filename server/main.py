@@ -7,6 +7,7 @@ from shazamio import Shazam
 from pydub import AudioSegment
 from math import ceil
 import threading 
+import time
 
 app = FastAPI()
 
@@ -55,7 +56,6 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
         with open(file.filename, 'wb') as f:
             f.write(contents)
         run_all_tasks(file.filename, interval)
-        # results = await shazam_all(file.filename, interval)
         manager.disconnect()
 
     except Exception as e:
@@ -66,6 +66,11 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
     return {"message": "Done"}
 
 async def run_task(shazam, part, position): 
+    print(f"Starting to analyse is running in thread: {threading.current_thread().name}")
+    # new_loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(new_loop)
+    # current_event_loop = asyncio.get_event_loop()
+    # print(f"My coroutine is running in event loop: {current_event_loop}")
     ret = await shazam.recognize_song(part)
     if ret is not None and 'track' in ret and ret['track'] is not None:
         track_info = {
@@ -75,15 +80,22 @@ async def run_task(shazam, part, position):
             'url': ret['track']['url'],
 
         }
-        actions = ret['track']['hub']['actions']
-        for action in actions:
-            if 'uri' in action:
-                track_info['uri'] = action['uri']
-        # print(ret)
+        if 'actions' in ret['track']['hub'].keys():
+            actions = ret['track']['hub']['actions']
+            for action in actions:
+                if 'uri' in action:
+                    track_info['uri'] = action['uri']
+        else:
+            print(ret)
         await manager.send_json(track_info)
-        # return track_info 
+
+def threaded_func(shazam, part, pos):
+    new_loop = asyncio.new_event_loop()
+    new_loop.run_until_complete(shazam.recognize_song(part))
+
 
 def run_all_tasks(filename, interval):
+    start = time.time()
     interval = interval * 60 * 1000
     shazam = Shazam()
     seg = AudioSegment.from_file(filename)
@@ -93,15 +105,20 @@ def run_all_tasks(filename, interval):
     threads = []
     
     for i in range(iters):
+        # thread = threading.Thread(
+        #     target=asyncio.run, 
+        #     args=(run_task(shazam, seg[i*interval:(i+1)*interval], i*interval),))
         thread = threading.Thread(
-            target=asyncio.run, 
-            args=(run_task(shazam, seg[i*interval:(i+1)*interval], i*interval),))
+            target=threaded_func,
+            args=(shazam, seg[i*interval:(i+1)*interval], i*interval),)
         threads.append(thread)
         thread.start()
 
     # Wait for all threads to finish
     for thread in threads:
         thread.join()
+    end = time.time()
+    print(f"Took {int(end-start)} seconds")
 
 @app.get("/")
 async def root():
