@@ -1,8 +1,8 @@
 import { ReactComponent as Loader } from './loader.svg'
 
-const LoadingButton = ({ onSubmit, text, loading = false,}) => {
+const LoadingButton = ({ text, loading = false,}) => {
   return (
-    <button className="submit-btn" onClick={onSubmit} disabled={loading}>
+    <button className="submit-btn" type='submit' disabled={loading}>
       {!loading ? text : <Loader className="spinner" />}
     </button>
   )

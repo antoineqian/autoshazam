@@ -4,7 +4,7 @@ import LoadingButton from './LoadingButton'
 
 const FileUploadForm = ({tracks, addTrack}) => {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [intervalValue, setIntervalValue] = useState(1);
+  const [intervalValue, setIntervalValue] = useState(3);
   const [isValid, setIsValid] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -46,19 +46,29 @@ const FileUploadForm = ({tracks, addTrack}) => {
       `http://localhost:8000/process`,
       formData,
       { headers: {'Content-Type': 'multipart/form-data'}})
+  
   setLoading(false);
+  setSelectedFile(null);
+  resetInput()
+  };
 
-};
+  const [inputReset, setInputReset] = useState('')
+  const resetInput = () => {
+    let randomString = Math.random().toString(36);
+    setInputReset(randomString)
+  };
 
   return (
     <div className="file-upload-form">
       <h2>Upload your file here</h2>
+      <form onSubmit={handleUpload}>
       <input
+        key={inputReset}
         type="file"
-        accept=".mp3, .wav"  // Adjust file types as needed
+        accept=".mp3, .wav, audio/*"  // Adjust file types as needed
         onChange={handleFileChange}
         // multiple="false"
-        required
+        required={true}
       />
       <input
         type="text"
@@ -69,7 +79,7 @@ const FileUploadForm = ({tracks, addTrack}) => {
         style={{ borderColor: isValid ? 'inherit' : 'red' }}
       />
       <LoadingButton text="Submit" onSubmit={handleUpload} loading={loading} />
-      {/* <button className={loading ? 'button--loading::after ' : ''} type="submit" onClick={handleUpload}>Upload</button> */}
+      </form>
     </div>
   );
 };
