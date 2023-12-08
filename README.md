@@ -3,17 +3,14 @@ Autoshazam lets you shazam a long audio file, typically a mix, according to a sp
 
 ## Run the client 
 
-`
-npm install
-npm run start
-`
+`npm install`
+`npm run start`
+
 
 ## Run the server
 
-`
-pip3 install fastapi uvicorn python-multipart websockets shazamio
-python3 -m uvicorn main:app --reload
-`
+`pip3 install -r requirements.txt`
+`python3 -m uvicorn main:app --reload`
 
 # Future updates
 - Persistent results
