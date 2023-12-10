@@ -2,3 +2,4 @@ server/autoshazam
 .ipynb_checkpoints
 env
 *.mp3
+__pycache__
