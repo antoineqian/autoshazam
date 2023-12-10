@@ -34,7 +34,7 @@ function App() {
   return (
     <div>
       <ListTracks tracks={tracks} deleteTrack={deleteTrack} reset={reset}/>
-      <FileUploadForm tracks={tracks} addTrack={addTrack}/>
+      <FileUploadForm setTracks={setTracks}/>
     </div>
   );
 }
