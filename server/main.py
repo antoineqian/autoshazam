@@ -18,35 +18,6 @@ app.add_middleware(
  allow_methods=["*"],
  allow_headers=["*"],
 )
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: list[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self):
-        self.active_connections = []
-
-    async def send_text(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
-    
-    async def send_json(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_json(message)
-
-manager = ConnectionManager()
-
-@app.websocket("/detect")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-    except:
-        manager.disconnect()
 
 @app.post("/process")
 async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...)):
@@ -55,22 +26,17 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
         contents = file.file.read()
         with open(file.filename, 'wb') as f:
             f.write(contents)
-        run_all_tasks(file.filename, interval)
-        manager.disconnect()
+        results = await run_all_tasks(file.filename, interval)
 
     except Exception as e:
         print(e)
         return {"message": "There was an error uploading the file", "e": e}
     finally:
         file.file.close()
-    return {"message": "Done"}
+    return results
 
-async def run_task(shazam, part, position): 
-    print(f"Starting to analyse is running in thread: {threading.current_thread().name}")
-    # new_loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(new_loop)
-    # current_event_loop = asyncio.get_event_loop()
-    # print(f"My coroutine is running in event loop: {current_event_loop}")
+async def run_task(part, position): 
+    shazam = Shazam()
     ret = await shazam.recognize_song(part)
     if ret is not None and 'track' in ret and ret['track'] is not None:
         track_info = {
@@ -87,38 +53,22 @@ async def run_task(shazam, part, position):
                     track_info['uri'] = action['uri']
         else:
             print(ret)
-        await manager.send_json(track_info)
-
-def threaded_func(shazam, part, pos):
-    new_loop = asyncio.new_event_loop()
-    new_loop.run_until_complete(shazam.recognize_song(part))
+        return track_info
 
 
-def run_all_tasks(filename, interval):
+async def run_all_tasks(filename, interval):
     start = time.time()
     interval = interval * 60 * 1000
-    shazam = Shazam()
     seg = AudioSegment.from_file(filename)
     dur = seg.duration_seconds
 
     iters = ceil(dur * 1000 / interval)
-    threads = []
-    
-    for i in range(iters):
-        # thread = threading.Thread(
-        #     target=asyncio.run, 
-        #     args=(run_task(shazam, seg[i*interval:(i+1)*interval], i*interval),))
-        thread = threading.Thread(
-            target=threaded_func,
-            args=(shazam, seg[i*interval:(i+1)*interval], i*interval),)
-        threads.append(thread)
-        thread.start()
+    coros = [run_task(seg[i*interval:(i+1)*interval], i) for i in range(iters)]
+    results = await asyncio.gather(*coros)
 
-    # Wait for all threads to finish
-    for thread in threads:
-        thread.join()
     end = time.time()
     print(f"Took {int(end-start)} seconds")
+    return results
 
 @app.get("/")
 async def root():
