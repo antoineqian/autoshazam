@@ -27,6 +27,7 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
         with open(file.filename, 'wb') as f:
             f.write(contents)
         results = await run_all_tasks(file.filename, interval)
+        results = [r for r in results if r is not None]
 
     except Exception as e:
         print(e)
@@ -54,6 +55,8 @@ async def run_task(part, position):
         else:
             print(ret)
         return track_info
+    else:
+        print(f"Didn't recognize at {position :}")
 
 
 async def run_all_tasks(filename, interval):
