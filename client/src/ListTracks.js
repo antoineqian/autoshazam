@@ -33,7 +33,6 @@ const ListTracks = ({ tracks, deleteTrack, reset}) => {
   
   // Specify the keys that should be considered for uniqueness
   const uniqueKeys = ['title', 'subtitle'];
-  console.log(tracks)
   const uniqueTracks = removeDuplicates(tracks, uniqueKeys);
   const sortedTracks = [...uniqueTracks].sort((a, b) => a.position - b.position);
   const trackList = sortedTracks ? sortedTracks.map((track)=>(

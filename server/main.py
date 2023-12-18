@@ -18,9 +18,11 @@ app.add_middleware(
  allow_methods=["*"],
  allow_headers=["*"],
 )
+from yt_dlp import YoutubeDL
 
-@app.post("/process")
-async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...)):
+
+@app.post("/processFile")
+async def processFile(file: UploadFile=File(...), interval: int=Form(...)):
     print(f"Processing file {file.filename} with interval {interval}")
     try:
         contents = file.file.read()
@@ -35,6 +37,21 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
     finally:
         file.file.close()
     return results
+
+def my_hook(d):
+    if d['status'] == 'finished':
+        print(f"Downloaded file path: {d['filename']}")
+
+
+@app.post("/processUrl")
+async def processUrl(url: str=Form(...), interval:int=Form(...)):
+    print(f"Processing url {url} with {interval} seconds")
+    ydl_opts = {
+        'outtmpl': './save/%(title)s.%(ext)s',
+        'progress_hooks': [my_hook],
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.download(url)
 
 async def run_task(part, position): 
     shazam = Shazam()

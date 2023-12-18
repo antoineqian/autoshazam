@@ -7,20 +7,26 @@ const FileUploadForm = ({setTracks}) => {
   const [intervalValue, setIntervalValue] = useState(3);
   const [isValid, setIsValid] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [url, setUrl] = useState('');
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedFile(file);
   };
 
-  const handleInputChange = (event) => {
+  const handleIntervalChange = (event) => {
     const value = event.target.value; 
 
     setIntervalValue(value);
     // Check if the entered value is a valid interval
     setIsValid(/^\d+$/.test(value));
   };
-
+  
+  const handleUrlChange = (event) => {
+    const value = event.target.value;
+    setUrl(value);
+  };
+  
   const [inputReset, setInputReset] = useState('')
   // Assigining a new key will force re-render
   const resetInput = () => {
@@ -30,29 +36,39 @@ const FileUploadForm = ({setTracks}) => {
 
   const handleUpload = async () => {
     // Handle file upload logic here
-    if (!selectedFile){
+    if (!selectedFile ){
       console.log("No file selected")
     }
     if(!isValid){
       console.log("Invalid input")
     }
     setLoading(true);
-
-    console.log('Uploading file:', selectedFile);
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('interval', parseInt(intervalValue));
-    const response = await axios.post(
-        `http://localhost:8000/process`,
+    if (selectedFile) {
+      console.log('Uploading file:', selectedFile);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('interval', parseInt(intervalValue));
+      const response = await axios.post(
+          `http://localhost:8000/processFile`,
+          formData,
+          { headers: {'Content-Type': 'multipart/form-data'}}
+      )
+    
+      if (response.status === 200) {
+        console.log('Detection done')
+        console.log(response)
+      }
+      setTracks(response.data)}
+    else {
+      const formData = new FormData();
+      formData.append('url', url);
+      formData.append('interval', parseInt(intervalValue));
+      const response = await axios.post(
+        `http://localhost:8000/processUrl`,
         formData,
         { headers: {'Content-Type': 'multipart/form-data'}}
-    )
-    
-    if (response.status === 200) {
-      console.log('Detection done')
-      console.log(response)
+      )
     }
-    setTracks(response.data)
     setLoading(false);
     setSelectedFile(null);
     resetInput()
@@ -61,21 +77,26 @@ const FileUploadForm = ({setTracks}) => {
 
   return (
     <div className="file-upload-form">
-      <h2>Upload your file here</h2>
+      <h2>Upload your file here or paste a link</h2>
       <form onSubmit={handleUpload}>
       <input
         key={inputReset}
         type="file"
         accept=".mp3, .wav, audio/*"  // Adjust file types as needed
         onChange={handleFileChange}
-        // multiple="false"
-        required={true}
+      />
+      <input 
+        type='url'
+        value={url}
+        onChange={handleUrlChange}
+        placeholder='https://soundcloud.com/petervanhoesen/sync-live-at-bassiani-september-2022'
+        required={false}
       />
       <input
         type="text"
         id="intervalInput"
         value={intervalValue}
-        onChange={handleInputChange}
+        onChange={handleIntervalChange}
         placeholder="Enter an interval"
         style={{ borderColor: isValid ? 'inherit' : 'red' }}
       />
