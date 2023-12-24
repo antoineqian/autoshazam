@@ -6,3 +6,6 @@ env
 # Pycaches
 __pycache__
 server/__pycache__
+
+# Downloaded files
+save
