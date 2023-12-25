@@ -3,3 +3,4 @@ server/autoshazam
 env
 *.mp3
 __pycache__
+*.pyc
