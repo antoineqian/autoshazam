@@ -28,13 +28,12 @@ async def initiate_processing(file: UploadFile=File(...), interval: int=Form(...
             f.write(contents)
         results = await run_all_tasks(file.filename, interval)
         results = [r for r in results if r is not None]
-
+        return results
     except Exception as e:
         print(e)
-        return {"message": "There was an error uploading the file", "e": e}
+        # return {"message": "There was an error uploading the file", "e": e}
     finally:
         file.file.close()
-    return results
 
 async def run_task(part, position): 
     shazam = Shazam()
