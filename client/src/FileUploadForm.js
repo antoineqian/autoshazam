@@ -72,33 +72,33 @@ const FileUploadForm = ({ setTracks }) => {
       setTracks(response.data)
     }
 
-    if (selectedFile) {
-      console.log('Uploading file:', selectedFile);
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('interval', parseInt(intervalValue));
-      const response = await axios.post(
-        `http://localhost:8000/processFile`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      )
+    // if (selectedFile) {
+    //   console.log('Uploading file:', selectedFile);
+    //   const formData = new FormData();
+    //   formData.append('file', selectedFile);
+    //   formData.append('interval', parseInt(intervalValue));
+    //   const response = await axios.post(
+    //     `http://localhost:8000/processFile`,
+    //     formData,
+    //     { headers: { 'Content-Type': 'multipart/form-data' } }
+    //   )
 
-      if (response.status === 200) {
-        console.log('Detection done')
-        console.log(response)
-      }
-      setTracks(response.data)
-    }
-    else {
-      const formData = new FormData();
-      formData.append('url', url);
-      formData.append('interval', parseInt(intervalValue));
-      const response = await axios.post(
-        `http://localhost:8000/processUrl`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      )
-    }
+    //   if (response.status === 200) {
+    //     console.log('Detection done')
+    //     console.log(response)
+    //   }
+    //   setTracks(response.data)
+    // }
+    // else {
+    //   const formData = new FormData();
+    //   formData.append('url', url);
+    //   formData.append('interval', parseInt(intervalValue));
+    //   const response = await axios.post(
+    //     `http://localhost:8000/processUrl`,
+    //     formData,
+    //     { headers: { 'Content-Type': 'multipart/form-data' } }
+    //   )
+    // }
     setLoading(false);
     setSelectedFile(null);
     resetInput()
@@ -107,7 +107,7 @@ const FileUploadForm = ({ setTracks }) => {
 
   return (
     <div className="file-upload-form">
-      <h2>Upload your file here or paste a link</h2>
+      <h2>Select a file or a folder here or paste a link</h2>
       <form onSubmit={handleUpload}>
         <input
           key={inputReset}
