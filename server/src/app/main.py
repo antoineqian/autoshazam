@@ -20,7 +20,7 @@ app.add_middleware(
 @app.post("/processFolder")
 async def processFolder(files: list[UploadFile] = File(...), interval: int=Form(...)):
     all_results = []
-    for file in files:
+    for i, file in enumerate(files):
         if not file.content_type.startswith("audio"):
             print(f"Skipping non-audio file {file.filename} {file.content_type}")
             continue
@@ -34,14 +34,15 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int=Form(
             f.write(contents)
         try:
             results = await shazam_file(file_location, interval)
-            all_results.append(results) 
+            for r in results:
+                r["fileIndex"] = i 
+            all_results.extend(results) 
         except Exception as e:
             print(e)
             return {"message": "There was an error uploading the file", "e": e}
         finally:
             file.file.close()
             os.remove(file_location)
-    print(all_results)
     return all_results
 
 @app.post("/processFile")

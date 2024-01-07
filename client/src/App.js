@@ -8,10 +8,10 @@ function App() {
 
   const [tracks, setTracks] = useState([])
 
-  const deleteTrack = i => {
+  const deleteTrack = (pos, index) => {
     setTracks(prevTracks => {
       const newTrackList = tracks.filter((track)=>{
-        return track.position !== i
+        return !(track.position == pos && track.fileIndex == index)
       })  
       return newTrackList;
     });
