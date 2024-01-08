@@ -9,3 +9,5 @@ server/__pycache__
 
 # Downloaded files
 save
+
+.DS_Store
