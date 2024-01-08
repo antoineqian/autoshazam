@@ -31,9 +31,31 @@ function App() {
     });
   };
   
+  function removeDuplicates(data, uniqueKeys) {
+    const seen = new Set();
+    const result = [];
+  
+    for (const item of data) {
+      // Create a string representation of the values of uniqueKeys for each item
+      const keyString = uniqueKeys.map(key => item[key]).join(',');
+  
+      // Check if the keyString has been seen before
+      if (!seen.has(keyString)) {
+        seen.add(keyString);
+        result.push(item);
+      }
+    }
+    return result;
+  }
+  
+  // Specify the keys that should be considered for uniqueness
+  const uniqueKeys = ['title', 'subtitle'];
+  const uniqueTracks = removeDuplicates(tracks, uniqueKeys);
+  const sortedTracks = [...uniqueTracks].sort((a, b) => a.position - b.position);
+  
   return (
     <div>
-      <ListTracks tracks={tracks} deleteTrack={deleteTrack} reset={reset}/>
+      <ListTracks sortedTracks={sortedTracks} deleteTrack={deleteTrack} reset={reset}/>
       <FileUploadForm setTracks={setTracks}/>
     </div>
   );
