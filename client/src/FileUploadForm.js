@@ -3,22 +3,21 @@ import axios from 'axios'
 import LoadingButton from './LoadingButton'
 
 const FileUploadForm = ({ setTracks }) => {
-  const [selectedFile, setSelectedFile] = useState(null);
   const [fileList, setFileList] = useState([]);
   const [intervalValue, setIntervalValue] = useState(3);
   const [isValid, setIsValid] = useState(true);
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState('');
+  const [mode, setMode] = useState("file") // file, folder, url
+  
+  const selectMode = (mode) => {
+    setMode(mode)
+  }
 
   const handleFileChange = (event) => {
     const fileList = event.target.files;
-
-    if (fileList.length === 1) {
-      // Single file selected
-      const file = fileList[0];
-      setSelectedFile(file);
-    } else {
-      // Folder or multiple files selected
+    if (fileList.length > 0) {
+      // Single file or folder / multiple files selected
       const folderFiles = Array.from(fileList);
       setFileList(folderFiles);
     }
@@ -44,19 +43,15 @@ const FileUploadForm = ({ setTracks }) => {
     setInputReset(randomString)
   };
 
-  const handleUpload = async () => {
-    // Handle file upload logic here
-    if (!selectedFile) {
-      console.log("No file selected")
-    }
+  const handleUpload = async (e) => {
+    e.preventDefault()
     if (!isValid) {
       console.log("Invalid input")
     }
     setLoading(true);
     if (fileList.length > 0) {
-      console.log("Uploading folder:", fileList.length)
       const formData = new FormData();
-      fileList.forEach((file, index) => {
+      fileList.forEach((file) => {
         formData.append(`files`, file);
       });
       formData.append('interval', parseInt(intervalValue));
@@ -72,51 +67,51 @@ const FileUploadForm = ({ setTracks }) => {
       setTracks(response.data)
     }
 
-    // if (selectedFile) {
-    //   console.log('Uploading file:', selectedFile);
-    //   const formData = new FormData();
-    //   formData.append('file', selectedFile);
-    //   formData.append('interval', parseInt(intervalValue));
-    //   const response = await axios.post(
-    //     `http://localhost:8000/processFile`,
-    //     formData,
-    //     { headers: { 'Content-Type': 'multipart/form-data' } }
-    //   )
-
-    //   if (response.status === 200) {
-    //     console.log('Detection done')
-    //     console.log(response)
-    //   }
-    //   setTracks(response.data)
-    // }
-    // else {
-    //   const formData = new FormData();
-    //   formData.append('url', url);
-    //   formData.append('interval', parseInt(intervalValue));
-    //   const response = await axios.post(
-    //     `http://localhost:8000/processUrl`,
-    //     formData,
-    //     { headers: { 'Content-Type': 'multipart/form-data' } }
-    //   )
-    // }
     setLoading(false);
-    setSelectedFile(null);
+    setFileList(null);
     resetInput()
   };
 
 
   return (
     <div className="file-upload-form">
-      <h2>Select a file or a folder here or paste a link</h2>
+      {/* <h2>Select a file or a folder here or paste a link</h2> */}
+      <div className="search-options">
+            <button 
+              onClick={() => selectMode("file")}
+              style={{backgroundColor: mode === "file" ? 'rgb(255, 255, 255)' : 'rgb(188, 188, 188)'}}
+              >Single File</button>
+            <button 
+              onClick={() => selectMode("folder")}
+              style={{backgroundColor: mode === "folder" ? 'rgb(255, 255, 255)' : 'rgb(188, 188, 188)'}}
+              >Folder</button>
+              <button 
+              onClick={() => selectMode("url")}
+              style={{backgroundColor: mode === "url" ? 'rgb(255, 255, 255)' : 'rgb(188, 188, 188)'}}
+              >URL</button>
+      </div>
+      <br/>
       <form onSubmit={handleUpload}>
+        {mode === "file" && (
         <input
           key={inputReset}
           type="file"
           accept=".mp3, .wav, audio/*"  // Adjust file types as needed
           onChange={handleFileChange}
-          directory=""  // Enable directory selection
-          webkitdirectory=""  // Enable directory selection for WebKit browsers (like Chrome)
+
         />
+        )}
+        {mode === "folder" && (
+        <input
+          key={inputReset}
+          type="file"
+          accept=".mp3, .wav, audio/*"  // Adjust file types as needed
+          onChange={handleFileChange}
+          directory="" 
+          webkitdirectory=""
+        />
+        )}
+        {mode === "url" && (
         <input
           type='url'
           value={url}
@@ -124,6 +119,7 @@ const FileUploadForm = ({ setTracks }) => {
           placeholder='https://soundcloud.com/petervanhoesen/sync-live-at-bassiani-september-2022'
           required={false}
         />
+        )}
         <input
           type="text"
           id="intervalInput"
@@ -134,6 +130,7 @@ const FileUploadForm = ({ setTracks }) => {
         />
         <LoadingButton text="Submit" onSubmit={handleUpload} loading={loading} />
       </form>
+
     </div>
   );
 };

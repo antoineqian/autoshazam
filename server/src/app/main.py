@@ -45,23 +45,6 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int=Form(
             os.remove(file_location)
     return all_results
 
-@app.post("/processFile")
-async def processFile(file: UploadFile=File(...), interval: int=Form(...)):
-    print(f"Processing file {file.filename} with interval {interval}")
-    try:
-        contents = file.file.read()
-        file_location = os.path.join('./storage', file.filename)
-
-        with open(file_location, 'wb') as f:
-            f.write(contents)
-        results = await shazam_file(file_location, interval)
-        return results
-    except Exception as e:
-        print(e)
-        return {"message": "There was an error uploading the file", "e": e}
-    finally:
-        file.file.close()
-
 
 
 # @app.post("/processUrl")
