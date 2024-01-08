@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, Form, WebSocket
+from fastapi import FastAPI, Form
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse

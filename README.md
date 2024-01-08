@@ -1,5 +1,5 @@
 # Autoshazam
-Autoshazam lets you shazam a long audio file, typically a mix, according to a specified interval in minutes.
+Autoshazam lets you shazam a long audio file, typically a mix, according to a specified interval in minutes. It can also process a folder of audio files (other types are ignored). Soon it will process urls
 
 ## Run the client 
 
@@ -10,7 +10,7 @@ Autoshazam lets you shazam a long audio file, typically a mix, according to a sp
 ## Run the server
 
 `pip3 install -r requirements.txt`
-`python3 -m uvicorn main:app --reload`
+`python -m uvicorn src.app.main:app--reload`
 
 # Future updates
 - Persistent results
