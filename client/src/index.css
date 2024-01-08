@@ -159,3 +159,17 @@ input {
   display: flex;
   flex-direction: column;
 }
+
+
+.search-options {
+  display: flex;
+}
+
+.search-options button {
+  width: 50%;
+  border: none;
+  padding: 10px;
+  color: rgb(35, 38, 47);
+  border-radius: 8px;
+
+}

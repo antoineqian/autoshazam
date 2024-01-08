@@ -7,37 +7,16 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import AudioPlayer from './AudioPlayer';
 
-const ListTracks = ({ tracks, deleteTrack, reset}) => {
+const ListTracks = ({ sortedTracks, deleteTrack, reset}) => {
   
   const copyToClipBoard = (textToCopy) => {
       copy(textToCopy);
       toast('Successfully copied!')
     };
 
-  function removeDuplicates(data, uniqueKeys) {
-    const seen = new Set();
-    const result = [];
-  
-    for (const item of data) {
-      // Create a string representation of the values of uniqueKeys for each item
-      const keyString = uniqueKeys.map(key => item[key]).join(',');
-  
-      // Check if the keyString has been seen before
-      if (!seen.has(keyString)) {
-        seen.add(keyString);
-        result.push(item);
-      }
-    }
-    return result;
-  }
-  
-  // Specify the keys that should be considered for uniqueness
-  const uniqueKeys = ['title', 'subtitle'];
-  console.log(tracks)
-  const uniqueTracks = removeDuplicates(tracks, uniqueKeys);
-  const sortedTracks = [...uniqueTracks].sort((a, b) => a.position - b.position);
+
   const trackList = sortedTracks ? sortedTracks.map((track)=>(
-  <div key={track.position}> 
+  <div key={track.position + "_" + track.fileIndex}> 
       <li className="collection-item">
         <div className='track-info'>
           <span className="title">{track.subtitle} - {track.title}  </span><br></br>
@@ -48,7 +27,7 @@ const ListTracks = ({ tracks, deleteTrack, reset}) => {
             <a href={track.url} target="_blank" rel="noopener noreferrer" title="Open in Shazam">
               <img src={shazamIcon} alt="Shazam Icon" className="icon"/>
             </a>
-            <a href="#!" onClick={e=>deleteTrack(track.position)} className="delete-icon" title="Remove from list">
+            <a href="#!" onClick={e=>deleteTrack(track.position, track.fileIndex)} className="delete-icon" title="Remove from list">
               <img src={deleteIcon} alt="Delete Icon" className="icon"/>
             </a>
             <a href="#!" onClick={e=>copyToClipBoard(`${track.subtitle} ${track.title}`)} title="Copy track info to clipboard">
