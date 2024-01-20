@@ -1,10 +1,11 @@
+import json
 import os
 from fastapi import FastAPI, Form
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
-from yt_dlp import YoutubeDL, postprocessor
+from yt_dlp import YoutubeDL
 
+from ..infra.processor import PathWriter
 from ..infra.shazam import shazam_file
 
 app = FastAPI()
@@ -47,19 +48,20 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int=Form(
 
 
 
-# @app.post("/processUrl")
-# async def processUrl(url: str=Form(...), interval:int=Form(...)):
-#     print(f"Processing url {url} with {interval} seconds")
-#     process_url(url, interval)
-#     # file_location = './storage/downloaded_file.%(ext)s'
-#     # ydl_opts = {
-#     #     'outtmpl': file_location,
-#     #     'progress_hooks': [print_location],
-#     # }
-#     # with YoutubeDL(ydl_opts) as ydl:
-        
-#     #     ydl.add_post_processor(ShazamProcessor(), when='post_process')
-#     #     ydl.download(url)
-#     return await shazam_file(downloaded_file_path, interval)
+@app.post("/processUrl")
+async def processUrl(url: str=Form(...), interval:int=Form(...)):
+    print(f"Processing url {url} with {interval} seconds")
+    file_location = './storage/%(title)s.%(ext)s'
+    ydl_opts = {
+        'outtmpl': file_location
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.add_post_processor(PathWriter(), when='post_process')
+        ydl.download(url)
+
+    with open('storage/path.json', 'r') as f:  
+        file_location = json.load(f)
+        results = await shazam_file(file_location, interval)
+    return results
 
 
