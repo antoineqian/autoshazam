@@ -73,4 +73,7 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         data = await websocket.receive_text()
         print(f"Received {data}")
-        await websocket.send_text(f"Message text was: {data}")
+        for i in range(3):
+            result = await shazam_file("/Users/antoineqian/Documents/Programming/autoShazam/server/01 - Forest Drive West - Impulse.mp3 ", 3)
+            await websocket.send_json(result)
+        # await websocket.send_text(f"Message text was: {data}")
