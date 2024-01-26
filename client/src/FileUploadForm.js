@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import axios from 'axios'
 import LoadingButton from './LoadingButton'
+import Socket from './Socket'
 
 const FileUploadForm = ({ setTracks }) => {
   const [fileList, setFileList] = useState([])
@@ -45,6 +46,9 @@ const FileUploadForm = ({ setTracks }) => {
 
   const handleUpload = async e => {
     e.preventDefault()
+    // var ws = new WebSocket(
+    //   'ws://localhost:8000/ws'
+    // )
     if (!isValid) {
       console.log('Invalid input')
     }
@@ -83,6 +87,7 @@ const FileUploadForm = ({ setTracks }) => {
     resetInput()
   }
 
+  
   return (
     <div className='file-upload-form'>
       {/* <h2>Select a file or a folder here or paste a link</h2> */}
@@ -158,7 +163,9 @@ const FileUploadForm = ({ setTracks }) => {
           loading={loading}
         />
       </form>
+      <Socket></Socket>
     </div>
+
   )
 }
 

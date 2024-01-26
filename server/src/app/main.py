@@ -1,6 +1,7 @@
 import json
 import os
-from fastapi import FastAPI, Form
+from fastapi import (
+    Cookie, Depends, status, FastAPI, Form, Query, WebSocket)
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from yt_dlp import YoutubeDL
@@ -65,3 +66,11 @@ async def processUrl(url: str=Form(...), interval:int=Form(...)):
     return results
 
 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    print("WS Endpoint")
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        print(f"Received {data}")
+        await websocket.send_text(f"Message text was: {data}")
