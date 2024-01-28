@@ -9,7 +9,6 @@ function App() {
 
   const [tracks, setTracks] = useState([])
   const [connection, setConnection] = useState(null)
-  const [url, setUrl] = useState('')
 
   const deleteTrack = (pos, index) => {
     setTracks(prevTracks => {
@@ -57,15 +56,10 @@ function App() {
   const sortedTracks = [...uniqueTracks].sort((a, b) => a.position - b.position);
   
 
-  function makeConnection(){
-    // ifconnection != null
-  }
   return (
     <div>
-      <FileUploadForm setTracks={setTracks} setConnection={setConnection}/>
+      <FileUploadForm addTrack={addTrack} setConnection={setConnection}/>
       <ListTracks sortedTracks={sortedTracks} deleteTrack={deleteTrack} reset={reset}/>
-      {connection != null && <Socket connection={connection}/>
-      }
     </div>
   );
 }

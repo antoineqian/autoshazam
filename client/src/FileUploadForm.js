@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import LoadingButton from './LoadingButton'
 
-const FileUploadForm = ({ setTracks, setConnection }) => {
+const FileUploadForm = ({ addTrack, setConnection }) => {
   const [fileList, setFileList] = useState([])
   const [intervalValue, setIntervalValue] = useState(3)
   const [isValid, setIsValid] = useState(true)
@@ -71,7 +71,15 @@ const FileUploadForm = ({ setTracks, setConnection }) => {
       // setConnection("url")
       var ws = new WebSocket("ws://localhost:8000/url");
       // await ws.receive()
-      ws.onopen = () => ws.send(url);
+      ws.onmessage = function(event) {  
+        console.log(event.data)
+        addTrack(event.data)
+    };
+
+      ws.onopen = () => {
+        ws.send(url); 
+        ws.send(intervalValue);
+      }
 
     //   response = await axios.post(
     //     `http://localhost:8000/processUrl`,
@@ -83,7 +91,7 @@ const FileUploadForm = ({ setTracks, setConnection }) => {
       console.log('Detection done')
       console.log(response)
     }
-    setTracks(response.data)
+    // setTracks(response.data)
 
     setLoading(false)
     setFileList(null)

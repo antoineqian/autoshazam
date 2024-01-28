@@ -8,7 +8,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import AudioPlayer from './AudioPlayer';
 
 const ListTracks = ({ sortedTracks, deleteTrack, reset}) => {
-  
+  console.log('ListTracks', sortedTracks)
   const copyToClipBoard = (textToCopy) => {
       copy(textToCopy);
       toast('Successfully copied!')

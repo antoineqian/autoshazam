@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from yt_dlp import YoutubeDL
 
 from ..infra.processor import PathWriter
-from ..infra.shazam import shazam_file
+from ..infra.shazam import shazam_file, shazam_file_ws
 
 app = FastAPI()
 
@@ -99,5 +99,15 @@ async def ws_processFolder(websocket: WebSocket):
 async def ws_processUrl(websocket: WebSocket):
     await websocket.accept()
     url = await websocket.receive_text()
-    print(f"Received {url}")
-    pass
+    interval = int(await websocket.receive_text())
+    file_location = './storage/%(title)s.%(ext)s'
+    ydl_opts = {
+        'outtmpl': file_location
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.add_post_processor(PathWriter(), when='post_process')
+        ydl.download(url)
+
+    with open('storage/path.json', 'r') as f:  
+        file_location = json.load(f)
+        await shazam_file_ws(file_location, interval, websocket)
