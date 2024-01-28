@@ -93,3 +93,11 @@ async def ws_processFolder(websocket: WebSocket):
         for i in range(3):
             result = await shazam_file("/Users/antoineqian/Documents/Programming/autoShazam/server/01 - Forest Drive West - Impulse.mp3 ", 3)
             await websocket.send_json(result)
+
+
+@app.websocket("/url")
+async def ws_processUrl(websocket: WebSocket):
+    await websocket.accept()
+    url = await websocket.receive_text()
+    print(f"Received {url}")
+    pass

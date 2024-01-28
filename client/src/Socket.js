@@ -1,7 +1,7 @@
 const Socket = ({connection}) => {
   var ws = new WebSocket("ws://localhost:8000/" + connection);
 
-  ws.onmessage = function(event) {
+  ws.onmessage = function(event) {  
       var messages = document.getElementById('messages')
       var message = document.createElement('li')
       var content = document.createTextNode(event.data)
@@ -18,7 +18,7 @@ const Socket = ({connection}) => {
 
   return (
     <div>
-      <h1>WebSocket Chat</h1>
+      <h1>WebSocket Chat {connection}</h1>
         <form action="" onSubmit={sendMessage}>
             <input type="text" id="messageText" autoComplete="off"/>
             <button>Send</button>

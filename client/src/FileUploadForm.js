@@ -68,13 +68,18 @@ const FileUploadForm = ({ setTracks, setConnection }) => {
     }
     if (mode === 'url') {
       formData.append(`url`, url)
-      response = await axios.post(
-        `http://localhost:8000/processUrl`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      )
-    }
-    if (response.status === 200) {
+      // setConnection("url")
+      var ws = new WebSocket("ws://localhost:8000/url");
+      // await ws.receive()
+      ws.onopen = () => ws.send(url);
+
+    //   response = await axios.post(
+    //     `http://localhost:8000/processUrl`,
+    //     formData,
+    //     { headers: { 'Content-Type': 'multipart/form-data' } }
+    //   )
+    // }
+    // if (response.status === 200) {
       console.log('Detection done')
       console.log(response)
     }
