@@ -1,7 +1,7 @@
 import json
 import os
 from fastapi import (
-    Cookie, Depends, status, FastAPI, Form, Query, WebSocket)
+    FastAPI, Form, WebSocket)
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from yt_dlp import YoutubeDL
@@ -18,6 +18,12 @@ app.add_middleware(
  allow_methods=["*"],
  allow_headers=["*"],
 )
+
+
+@app.post("/uploadFolder")
+async def uploadFolder(files: list[UploadFile] = File(...), interval: int=Form(...)):
+    for i, file in enumerate(files):
+        print(f"Uploaded {file.filename} {file.content_type}")
 
 @app.post("/processFolder")
 async def processFolder(files: list[UploadFile] = File(...), interval: int=Form(...)):
@@ -76,4 +82,14 @@ async def websocket_endpoint(websocket: WebSocket):
         for i in range(3):
             result = await shazam_file("/Users/antoineqian/Documents/Programming/autoShazam/server/01 - Forest Drive West - Impulse.mp3 ", 3)
             await websocket.send_json(result)
-        # await websocket.send_text(f"Message text was: {data}")
+
+@app.websocket("/ws_processFolder")
+async def ws_processFolder(websocket: WebSocket):
+    print("WS processFolder")
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        print(f"Received {data}")
+        for i in range(3):
+            result = await shazam_file("/Users/antoineqian/Documents/Programming/autoShazam/server/01 - Forest Drive West - Impulse.mp3 ", 3)
+            await websocket.send_json(result)

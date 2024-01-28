@@ -2,11 +2,13 @@
 import FileUploadForm from './FileUploadForm';
 import { useState } from 'react'
 import ListTracks from './ListTracks'
+import Socket from './Socket'
 
 
 function App() {
 
   const [tracks, setTracks] = useState([])
+  const [connection, setConnection] = useState(null)
 
   const deleteTrack = (pos, index) => {
     setTracks(prevTracks => {
@@ -55,8 +57,9 @@ function App() {
   
   return (
     <div>
+      <FileUploadForm setTracks={setTracks} setConnection={setConnection}/>
       <ListTracks sortedTracks={sortedTracks} deleteTrack={deleteTrack} reset={reset}/>
-      <FileUploadForm setTracks={setTracks}/>
+      {connection != null && <Socket connection={connection}/>}
     </div>
   );
 }

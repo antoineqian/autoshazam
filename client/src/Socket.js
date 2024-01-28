@@ -1,5 +1,5 @@
-const Socket = () => {
-  var ws = new WebSocket("ws://localhost:8000/ws");
+const Socket = ({connection}) => {
+  var ws = new WebSocket("ws://localhost:8000/" + connection);
 
   ws.onmessage = function(event) {
       var messages = document.getElementById('messages')
