@@ -2,13 +2,10 @@
 import FileUploadForm from './FileUploadForm';
 import { useState } from 'react'
 import ListTracks from './ListTracks'
-import Socket from './Socket'
-
 
 function App() {
 
   const [tracks, setTracks] = useState([])
-  const [connection, setConnection] = useState(null)
 
   const deleteTrack = (pos, index) => {
     setTracks(prevTracks => {
@@ -19,9 +16,10 @@ function App() {
     });
   }
 
-  const addTrack = track => {
+  const addTrack = (track) => {
     setTracks(prevTracks => {
-      const newTrackList = [...prevTracks, track];
+      const newTrackList = [...prevTracks, JSON.parse(track)];
+      console.log(newTrackList)
       return newTrackList;
     });
   };
@@ -33,33 +31,12 @@ function App() {
     });
   };
   
-  function removeDuplicates(data, uniqueKeys) {
-    const seen = new Set();
-    const result = [];
-  
-    for (const item of data) {
-      // Create a string representation of the values of uniqueKeys for each item
-      const keyString = uniqueKeys.map(key => item[key]).join(',');
-  
-      // Check if the keyString has been seen before
-      if (!seen.has(keyString)) {
-        seen.add(keyString);
-        result.push(item);
-      }
-    }
-    return result;
-  }
-  
-  // Specify the keys that should be considered for uniqueness
-  const uniqueKeys = ['title', 'subtitle'];
-  const uniqueTracks = removeDuplicates(tracks, uniqueKeys);
-  const sortedTracks = [...uniqueTracks].sort((a, b) => a.position - b.position);
-  
+
 
   return (
     <div>
-      <FileUploadForm addTrack={addTrack} setConnection={setConnection}/>
-      <ListTracks sortedTracks={sortedTracks} deleteTrack={deleteTrack} reset={reset}/>
+      <FileUploadForm addTrack={addTrack}/>
+      <ListTracks tracks={tracks} deleteTrack={deleteTrack} reset={reset}/>
     </div>
   );
 }

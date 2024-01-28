@@ -60,6 +60,7 @@ async def shazam_segment_ws(segment, position, websocket):
                     track_info['uri'] = action['uri']
         else:
             print(ret)
+        print(f"sending {track_info['subtitle']}")
         await websocket.send_json(track_info)
     else:
         print(f"Didn't recognize at {position :}")
@@ -72,7 +73,7 @@ async def shazam_file_ws(filename, interval, websocket):
 
     iters = ceil(dur * 1000 / interval)
     coros = [shazam_segment_ws(seg[i*interval:(i+1)*interval], i, websocket) for i in range(iters)]
-    results = await asyncio.gather(*coros)
+    await asyncio.gather(*coros)
 
     end = time.time()
     print(f"Took {int(end-start)} seconds")

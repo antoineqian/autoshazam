@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import LoadingButton from './LoadingButton'
 
-const FileUploadForm = ({ addTrack, setConnection }) => {
+const FileUploadForm = ({ addTrack }) => {
   const [fileList, setFileList] = useState([])
   const [intervalValue, setIntervalValue] = useState(3)
   const [isValid, setIsValid] = useState(true)
@@ -57,7 +57,6 @@ const FileUploadForm = ({ addTrack, setConnection }) => {
         fileList.forEach(file => {
           formData.append(`files`, file)
         })
-        setConnection("ws_processFolder")
         
         response = await axios.post(
           `http://localhost:8000/processFolder`,
@@ -68,9 +67,7 @@ const FileUploadForm = ({ addTrack, setConnection }) => {
     }
     if (mode === 'url') {
       formData.append(`url`, url)
-      // setConnection("url")
       var ws = new WebSocket("ws://localhost:8000/url");
-      // await ws.receive()
       ws.onmessage = function(event) {  
         console.log(event.data)
         addTrack(event.data)
@@ -80,18 +77,8 @@ const FileUploadForm = ({ addTrack, setConnection }) => {
         ws.send(url); 
         ws.send(intervalValue);
       }
-
-    //   response = await axios.post(
-    //     `http://localhost:8000/processUrl`,
-    //     formData,
-    //     { headers: { 'Content-Type': 'multipart/form-data' } }
-    //   )
-    // }
-    // if (response.status === 200) {
-      console.log('Detection done')
       console.log(response)
     }
-    // setTracks(response.data)
 
     setLoading(false)
     setFileList(null)
@@ -101,7 +88,6 @@ const FileUploadForm = ({ addTrack, setConnection }) => {
   
   return (
     <div className='file-upload-form'>
-      {/* <h2>Select a file or a folder here or paste a link</h2> */}
       <div className='search-options'>
         <button
           onClick={() => selectMode('file')}
