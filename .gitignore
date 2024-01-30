@@ -15,3 +15,5 @@ save
 front/node_modules/
 front/.cache/
 front/public
+
+node_modules
