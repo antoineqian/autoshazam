@@ -11,3 +11,7 @@ server/__pycache__
 save
 
 .DS_Store
+
+front/node_modules/
+front/.cache/
+front/public
