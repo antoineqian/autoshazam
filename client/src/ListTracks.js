@@ -7,13 +7,40 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import AudioPlayer from './AudioPlayer';
 
-const ListTracks = ({ sortedTracks, deleteTrack, reset}) => {
+const ListTracks = ({ tracks, deleteTrack, reset}) => {
+  console.log('ListTracks', tracks.length)
+
+  function removeDuplicates(data, uniqueKeys) {
+    const seen = new Set();
+    const result = [];
   
+    for (const item of data) {
+      // Create a string representation of the values of uniqueKeys for each item
+      const keyString = uniqueKeys.map(key => item[key]).join(',');
+  
+      // Check if the keyString has been seen before
+      if (!seen.has(keyString)) {
+        seen.add(keyString);
+        result.push(item);
+      }
+    }
+    return result;
+  }
+  
+  // Specify the keys that should be considered for uniqueness
+  const uniqueKeys = ['title', 'subtitle'];
+  const uniqueTracks = removeDuplicates(tracks, uniqueKeys);
+  const sortedTracks = [...uniqueTracks].sort((a, b) => a.position - b.position);
+  
+
   const copyToClipBoard = (textToCopy) => {
       copy(textToCopy);
       toast('Successfully copied!')
     };
 
+  if (sortedTracks.length > 0) {
+    console.log("sorted", sortedTracks[0])
+  }
 
   const trackList = sortedTracks ? sortedTracks.map((track)=>(
   <div key={track.position + "_" + track.fileIndex}> 
