@@ -68,8 +68,8 @@ const FileUploadForm = ({ addTrack }) => {
     if (mode === 'url') {
       formData.append(`url`, url)
       var ws = new WebSocket("ws://localhost:8000/url");
-      ws.onmessage = function(event) {  
-        console.log(event.data)
+      ws.onmessage = function(event) { 
+        // TODO: Start and finish messages 
         addTrack(event.data)
     };
 
@@ -160,7 +160,6 @@ const FileUploadForm = ({ addTrack }) => {
           loading={loading}
         />
       </form>
-      {/* <Socket></Socket> */}
     </div>
 
   )
