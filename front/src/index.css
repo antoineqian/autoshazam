@@ -1,0 +1,175 @@
+body {
+  margin:0;
+  width: 100%;
+  padding: 0;
+  background-color: rgb(226, 241, 255);
+  display: flex;
+  justify-content: center;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.file-upload-form {
+  max-width: 400px;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.btn{
+  width: 100%;
+  font-family: 'Anek Malayalam', sans-serif;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  min-width: 200px;
+  min-height: 36px;
+  cursor: pointer;
+  outline: none;
+}
+
+.reset-btn {
+  background: yellowgreen;
+}
+
+.reset-btn:hover {
+  background-color: rgb(130, 170, 50);
+}
+
+.submit-btn {
+  width: 100%;
+  font-family: 'Anek Malayalam', sans-serif;
+  background: #4caf50;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  min-width: 200px;
+  min-height: 36px;
+  cursor: pointer;
+  outline: none;
+}
+
+.submit-btn:disabled {
+  background: #e7e8e9;
+  color: #9fa3a9;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation-name: spin;
+  animation-duration: 500ms;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.container {
+  /* max-width: 900px; */
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.collection-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.collection-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.track-info {
+  flex-grow: 1;
+}
+
+.title {
+  font-weight: bold;
+}
+
+.subtitle {
+  color: #555;
+}
+
+.url {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.9rem;
+  color: #3498db;
+}
+
+.delete-icon {
+  color: #e74c3c;
+  cursor: pointer;
+}
+
+.icon {
+  width: 16px;
+  margin: 5px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: right;
+}
+
+.playbutton {
+  border: none;
+  cursor: pointer;
+  background-color: white;
+  box-sizing: border-box;
+  margin-left:0;
+  margin-right:0;
+}
+.track-info{
+  display: flex;
+  flex-direction: column;
+}
+
+
+.search-options {
+  display: flex;
+}
+
+.search-options button {
+  width: 50%;
+  border: none;
+  padding: 10px;
+  color: rgb(35, 38, 47);
+  border-radius: 8px;
+
+}

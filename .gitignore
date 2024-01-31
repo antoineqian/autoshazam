@@ -8,7 +8,7 @@ __pycache__
 server/__pycache__
 
 # Downloaded files
-save
+server/storage
 
 .DS_Store
 
