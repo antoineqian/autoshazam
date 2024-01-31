@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import LoadingButton from './LoadingButton'
 
-const FileUploadForm = ({ addTrack }) => {
+const FileUploadForm = ({ addTrack , setTracks}) => {
   const [fileList, setFileList] = useState([])
   const [intervalValue, setIntervalValue] = useState(3)
   const [isValid, setIsValid] = useState(true)
@@ -63,6 +63,7 @@ const FileUploadForm = ({ addTrack }) => {
           formData,
           { headers: { 'Content-Type': 'multipart/form-data' } }
         )
+        setTracks(response.data)
       }
     }
     if (mode === 'url') {
@@ -77,7 +78,6 @@ const FileUploadForm = ({ addTrack }) => {
         ws.send(url); 
         ws.send(intervalValue);
       }
-      console.log(response)
     }
 
     setLoading(false)

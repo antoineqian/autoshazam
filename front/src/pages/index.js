@@ -44,7 +44,7 @@ const IndexPage = () => {
   return (
     <div>
       <Login></Login>
-      <FileUploadForm addTrack={addTrack}/>
+      <FileUploadForm addTrack={addTrack} setTracks={setTracks}/>
       <ListTracks tracks={tracks} deleteTrack={deleteTrack} reset={reset}/>
     </div>
   );
