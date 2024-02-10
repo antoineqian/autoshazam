@@ -1,7 +1,6 @@
 server/autoshazam
 .ipynb_checkpoints
 env
-*.mp3
 
 # Pycaches
 __pycache__
@@ -17,3 +16,4 @@ front/.cache/
 front/public
 
 node_modules
+.cache

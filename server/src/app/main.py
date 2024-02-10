@@ -46,6 +46,7 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int=Form(
                 r["fileIndex"] = i 
             all_results.extend(results) 
         except Exception as e:
+            print("Exception caught")
             print(e)
             return {"message": "There was an error uploading the file", "e": e}
         finally:

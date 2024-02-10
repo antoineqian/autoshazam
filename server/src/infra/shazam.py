@@ -6,25 +6,28 @@ from math import ceil
 
 async def shazam_segment(segment, position): 
     shazam = Shazam()
-    ret = await shazam.recognize_song(segment)
-    if ret is not None and 'track' in ret and ret['track'] is not None:
-        track_info = {
-            'position': position / 60 / 1000,
-            'title': ret['track']['title'],
-            'subtitle': ret['track']['subtitle'],
-            'url': ret['track']['url'],
+    try:
+        ret = await shazam.recognize_song(segment)
+        if ret is not None and 'track' in ret and ret['track'] is not None:
+            track_info = {
+                'position': position / 60 / 1000,
+                'title': ret['track']['title'],
+                'subtitle': ret['track']['subtitle'],
+                'url': ret['track']['url'],
 
-        }
-        if 'actions' in ret['track']['hub'].keys():
-            actions = ret['track']['hub']['actions']
-            for action in actions:
-                if 'uri' in action:
-                    track_info['uri'] = action['uri']
+            }
+            if 'actions' in ret['track']['hub'].keys():
+                actions = ret['track']['hub']['actions']
+                for action in actions:
+                    if 'uri' in action:
+                        track_info['uri'] = action['uri']
+            else:
+                print(f"ret {ret}")
+            return track_info
         else:
-            print(ret)
-        return track_info
-    else:
-        print(f"Didn't recognize at {position :}")
+            print(f"Didn't recognize at {position :}")
+    except Exception:
+        pass
 
 
 async def shazam_file(filename, interval):
