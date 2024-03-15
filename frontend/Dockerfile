@@ -1,6 +1,5 @@
 from node:lts-slim
-WORKDIR /code
 COPY . /code/
-RUN npm install -f
-RUN npm run build
+WORKDIR /code
+RUN npm install -f && npm run build
 CMD ["npm", "run", "start"]
