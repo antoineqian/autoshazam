@@ -32,7 +32,7 @@ Run the backend via the `uvicorn` python module:
 
 ## Install and run frontend and backend using `docker-compose`
 
-If you have `docker` and `docker-compose` installed, it might be easier for you to simply build and run the containers:
+If you have `docker` and `docker-compose` installed, it might be easier (and much lighter!) for you to simply build and run the containers:
 
 `docker-compose up -d --build`
 
@@ -40,6 +40,7 @@ You can then make sure everything is running properly by following the logs:
 
 `docker-compose logs -f`
 
+Just to give you an idea, thanks to multi-stage Docker building and slim packages, we go from a total size of around 2.5Gb (~1Gb for frontend and ~1.5Gb for backend) to a total built size of "only" 750Mb for the two Docker images (~50Mb for frontend and ~700Mb for backend).
 
 # Future updates
 - Persistent results
