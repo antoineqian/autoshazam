@@ -1,19 +1,21 @@
-server/autoshazam
+.DS_Store
+.swp
+
+.ipynb
 .ipynb_checkpoints
+
 env
 
 # Pycaches
 __pycache__
-server/__pycache__
 
 # Downloaded files
-server/storage
+backend/storage
 
-.DS_Store
+# Built frontend and node packages
+frontend/node_modules/
+frontend/public
+frontend/.cache/
 
-front/node_modules/
-front/.cache/
-front/public
-
-node_modules
-.cache
+.prettierignore
+.prettierrc

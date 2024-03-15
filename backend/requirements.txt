@@ -1,6 +1,7 @@
-fastapi 
+fastapi
 uvicorn
 python-multipart
 websockets
 shazamio
 socketio
+yt-dlp[default]
