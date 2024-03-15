@@ -22,7 +22,7 @@ Using `python3.11`, install the requirements (note that this includes `yt-dlp` t
 
 ```
 apt-get install ffmpeg # Optional (note: use brew install ffmpeg if on macOS)
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 Run the backend via the `uvicorn` python module:
