@@ -1,9 +1,9 @@
 from unittest.mock import AsyncMock
 import pytest
 
-from server.src.infra.shazam import shazam_file
+from backend.src.infra.shazam import shazam_file
 
-pytest.mark.asyncio 
+pytest.mark.asyncio
 
 
 def test_processFolder():
