@@ -7,14 +7,7 @@ First, install the required node packages. We need to use `-f` since there are s
 
 `npm install -f`
 
-Then, build the frontend website with `gastby` using the following alias:
-
-`npm run build`
-
-Finally, run the frontend.
-
-`npm run start`
-
+`npm run dev`
 
 ## Install and run the backend
 
