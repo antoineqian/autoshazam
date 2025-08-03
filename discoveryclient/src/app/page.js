@@ -1,41 +1,11 @@
-"use client";
-
-import React, { useState } from "react";
-import ListTracks from "../components/ListTracks";
-import FileUploadForm from "../components/FileUploadForm";
-
-import Head from "next/head";
-
-export default function HomePage() {
-  const [tracks, setTracks] = useState([]);
-
-  const deleteTrack = (pos, index) => {
-    setTracks((prevTracks) =>
-      prevTracks.filter(
-        (track) => !(track.position === pos && track.fileIndex === index)
-      )
-    );
-  };
-
-  const addTrack = (track) => {
-    setTracks((prevTracks) => [...prevTracks, JSON.parse(track)]);
-  };
-
-  const reset = () => {
-    setTracks([]);
-  };
-
-
+export default function LandingPage() {
   return (
-    <>
-      <Head>
-        <title>Home Page</title>
-      </Head>
-      <div>
-
-        <FileUploadForm addTrack={addTrack} setTracks={setTracks} />
-        <ListTracks tracks={tracks} deleteTrack={deleteTrack} reset={reset} />
-      </div>
-    </>
+    <main className="text-center py-20">
+      <h1 className="text-4xl font-bold mb-4">Welcome to Audio App</h1>
+      <p className="mb-6">Sign in to start uploading and exploring tracks.</p>
+      <a href="/dashboard" className="underline text-blue-600">
+        Go to Dashboard →
+      </a>
+    </main>
   );
 }
