@@ -116,3 +116,5 @@ async def ws_processUrl(websocket: WebSocket):
     with open("storage/path.json", "r") as f:
         file_location = json.load(f)
         await shazam_file_ws(file_location, interval, websocket)
+
+    await websocket.send_text("DONE")

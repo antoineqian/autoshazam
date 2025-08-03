@@ -59,7 +59,7 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
     </div>)) : null
 
   return (
-    // sortedTracks.length > 0 ?(
+
     <div className='container'>
       <h3>Results</h3>
       <p>{sortedTracks.length} tracks have been detected </p>
@@ -69,7 +69,7 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
         {trackList}
       </ul>
     </div>
-    // ) : <div></div>
+
   )
 }
 

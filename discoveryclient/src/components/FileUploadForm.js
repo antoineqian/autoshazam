@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import LoadingButton from './LoadingButton'
 
-const FileUploadForm = ({ addTrack , setTracks}) => {
+const FileUploadForm = ({ addTrack, setTracks }) => {
   const [fileList, setFileList] = useState([])
   const [intervalValue, setIntervalValue] = useState(3)
   const [isValid, setIsValid] = useState(true)
@@ -57,7 +57,7 @@ const FileUploadForm = ({ addTrack , setTracks}) => {
         fileList.forEach(file => {
           formData.append(`files`, file)
         })
-        
+
         response = await axios.post(
           `http://localhost:8000/processFolder`,
           formData,
@@ -69,13 +69,21 @@ const FileUploadForm = ({ addTrack , setTracks}) => {
     if (mode === 'url') {
       formData.append(`url`, url)
       var ws = new WebSocket("ws://localhost:8000/url");
-      ws.onmessage = function(event) { 
-        // TODO: Start and finish messages 
+      ws.onmessage = function (event) {
+        // TODO: Start messages 
+
+        if (event.data === "DONE") {
+          console.log("DONE")
+          setLoading(false);
+          ws.close();
+          return;
+        }
         addTrack(event.data)
-    };
+      };
 
       ws.onopen = () => {
-        ws.send(url); 
+        setLoading(true);
+        ws.send(url);
         ws.send(intervalValue);
       }
     }
@@ -85,7 +93,7 @@ const FileUploadForm = ({ addTrack , setTracks}) => {
     resetInput()
   }
 
-  
+
   return (
     <div className='file-upload-form'>
       <div className='search-options'>
