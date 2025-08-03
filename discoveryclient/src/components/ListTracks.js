@@ -1,14 +1,10 @@
 import React from 'react'
-import shazamIcon from '../public/images/shazam.svg';
-import deleteIcon from '../public/images/delete.svg';
-import copyIcon from '../public/images/copy.svg';
 import copy from 'clipboard-copy';
 import toast, { Toaster } from 'react-hot-toast';
 
 import AudioPlayer from './AudioPlayer';
 
 const ListTracks = ({ tracks, deleteTrack, reset }) => {
-  console.log('ListTracks', tracks.length)
 
   function removeDuplicates(data, uniqueKeys) {
     const seen = new Set();
@@ -52,13 +48,13 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
         <div className="button-container">
           <AudioPlayer audioSrc={track.uri} />
           <a href={track.url} target="_blank" rel="noopener noreferrer" title="Open in Shazam">
-            <img src={shazamIcon} alt="Shazam Icon" className="icon" />
+            <img src="shazam.svg" alt="Shazam Icon" className="icon" />
           </a>
           <a href="#!" onClick={e => deleteTrack(track.position, track.fileIndex)} className="delete-icon" title="Remove from list">
-            <img src={deleteIcon} alt="Delete Icon" className="icon" />
+            <img src="delete.svg" alt="Delete Icon" className="icon" />
           </a>
           <a href="#!" onClick={e => copyToClipBoard(`${track.subtitle} ${track.title}`)} title="Copy track info to clipboard">
-            <img src={copyIcon} alt="Copy Icon" className="icon" />
+            <img src="copy.svg" alt="Copy Icon" className="icon" />
           </a>
           <Toaster />
         </div>

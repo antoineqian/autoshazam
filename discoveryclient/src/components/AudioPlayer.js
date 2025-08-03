@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import ReactPlayer from 'react-player';
-import playIcon from '../public/images/play-button.svg';
-import pauseIcon from '../public/images/pause.svg';
+
 
 const AudioPlayer = ({ audioSrc }) => {
   const [playing, setPlaying] = useState(false);
@@ -22,8 +21,8 @@ const AudioPlayer = ({ audioSrc }) => {
         onClick={handlePlayPause}
         title="Play Preview">
         {playing ?
-          <img src={pauseIcon} alt="Pause Icon" className="icon" />
-          : <img src={playIcon} alt="Play Icon" className="icon" />
+          <img src="pause.svg" alt="Pause Icon" className="icon" />
+          : <img src="play-button.svg" alt="Play Icon" className="icon" />
         }
       </button>
     </div>
