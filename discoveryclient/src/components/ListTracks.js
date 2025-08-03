@@ -34,9 +34,6 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
     toast('Successfully copied!')
   };
 
-  if (sortedTracks.length > 0) {
-    console.log("sorted", sortedTracks[0])
-  }
 
   const trackList = sortedTracks ? sortedTracks.map((track) => (
     <div key={track.position + "_" + track.fileIndex}>
