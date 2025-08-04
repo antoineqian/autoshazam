@@ -5,8 +5,10 @@ import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
-  title: 'Next.js SaaS Starter',
-  description: 'Get started quickly with Next.js, Postgres, and Stripe.'
+  title: 'The Drill',
+  description: `Identify songs from recordings, file folders, or streaming URLs.
+                Perfect for crate diggers, DJs, and music lovers who never want
+                to miss a track again.`
 };
 
 export const viewport: Viewport = {
