@@ -19,12 +19,6 @@ app.add_middleware(
 )
 
 
-@app.post("/uploadFolder")
-async def uploadFolder(files: list[UploadFile] = File(...), interval: int = Form(...)):
-    for i, file in enumerate(files):
-        print(f"Uploaded {file.filename} {file.content_type}")
-
-
 @app.post("/processFolder")
 async def processFolder(files: list[UploadFile] = File(...), interval: int = Form(...)):
     all_results = []
