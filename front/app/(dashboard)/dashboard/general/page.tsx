@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { updateAccount } from '@/app/(login)/actions';
-import { User } from '@/lib/db/schema';
+import { User, TeamDataWithMembers } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import { customerPortalAction } from '@/lib/payments/actions';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -71,7 +72,50 @@ function AccountFormWithData({ state }: { state: ActionState }) {
     />
   );
 }
+function SubscriptionSkeleton() {
+  return (
+    <Card className="mb-8 h-[140px]">
+      <CardHeader>
+        <CardTitle>Team Subscription</CardTitle>
+      </CardHeader>
+    </Card>
+  );
+}
 
+function ManageSubscription() {
+  const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <CardTitle>Subscription</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div className="mb-4 sm:mb-0">
+              <p className="font-medium">
+                Current Plan: {teamData?.planName || 'Free'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {teamData?.subscriptionStatus === 'active'
+                  ? 'Billed monthly'
+                  : teamData?.subscriptionStatus === 'trialing'
+                    ? 'Trial period'
+                    : 'No active subscription'}
+              </p>
+            </div>
+            <form action={customerPortalAction}>
+              <Button type="submit" variant="outline">
+                Manage Subscription
+              </Button>
+            </form>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 export default function GeneralPage() {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     updateAccount,
@@ -84,7 +128,7 @@ export default function GeneralPage() {
         General Settings
       </h1>
 
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
@@ -116,6 +160,9 @@ export default function GeneralPage() {
           </form>
         </CardContent>
       </Card>
+      <Suspense fallback={<SubscriptionSkeleton />}>
+        <ManageSubscription />
+      </Suspense>
     </section>
   );
 }
