@@ -19,3 +19,5 @@ frontend/.cache/
 
 .prettierignore
 .prettierrc
+
+*.env
