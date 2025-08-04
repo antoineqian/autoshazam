@@ -273,3 +273,98 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .file-upload-form {
+    @apply max-w-md mx-auto p-5 border border-gray-300 rounded-lg shadow;
+  }
+
+  .btn {
+    @apply w-full font-bold text-sm text-white min-w-[200px] min-h-[36px] rounded-lg cursor-pointer;
+    font-family: 'Anek Malayalam', sans-serif;
+  }
+
+  .reset-btn {
+    background: yellowgreen;
+  }
+
+  .reset-btn:hover {
+    background-color: rgb(130, 170, 50);
+  }
+
+  .submit-btn {
+    background: #4caf50;
+  }
+
+  .submit-btn:disabled {
+    background: #e7e8e9;
+    color: #9fa3a9;
+    cursor: not-allowed;
+  }
+
+  .submit-btn:hover {
+    background-color: #45a049;
+  }
+
+  .spinner {
+    animation: spin 500ms linear infinite;
+  }
+
+  .container {
+    @apply mx-auto p-5;
+  }
+
+  .collection-item {
+    @apply flex items-center justify-between mb-5 p-4 rounded-lg bg-white shadow transition-shadow;
+  }
+
+  .collection-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .track-info {
+    @apply flex flex-col flex-grow;
+  }
+
+  .title {
+    font-weight: bold;
+  }
+
+  .subtitle {
+    color: #555;
+  }
+
+  .url {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.9rem;
+    color: #3498db;
+  }
+
+  .delete-icon {
+    color: #e74c3c;
+    cursor: pointer;
+  }
+
+  .icon {
+    width: 16px;
+    margin: 5px;
+  }
+
+  .button-container {
+    @apply flex justify-end;
+  }
+
+  .playbutton {
+    @apply border-0 bg-white cursor-pointer;
+    box-sizing: border-box;
+  }
+
+  .search-options {
+    @apply flex;
+  }
+
+  .search-options button {
+    @apply w-1/2 border-0 p-2 text-gray-900 rounded-lg;
+  }
+}
