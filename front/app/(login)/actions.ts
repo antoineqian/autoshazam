@@ -168,7 +168,6 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         .set({ status: 'accepted' })
         .where(eq(invitations.id, invitation.id));
 
-      await logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION);
 
       [createdTeam] = await db
         .select()
@@ -197,7 +196,6 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     teamId = createdTeam.id;
     userRole = 'owner';
 
-    await logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM);
   }
 
   const newTeamMember: NewTeamMember = {
@@ -381,12 +379,6 @@ export const removeTeamMember = validatedActionWithUser(
         )
       );
 
-    await logActivity(
-      userWithTeam.teamId,
-      user.id,
-      ActivityType.REMOVE_TEAM_MEMBER
-    );
-
     return { success: 'Team member removed successfully' };
   }
 );
@@ -445,11 +437,7 @@ export const inviteTeamMember = validatedActionWithUser(
       status: 'pending'
     });
 
-    await logActivity(
-      userWithTeam.teamId,
-      user.id,
-      ActivityType.INVITE_TEAM_MEMBER
-    );
+
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
