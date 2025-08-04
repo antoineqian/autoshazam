@@ -5,7 +5,6 @@ import React, { useState } from "react";
 import ListTracks from "@/components/ListTracks";
 import FileUploadForm from "@/components/FileUploadForm";
 
-import Head from "next/head";
 type Track = {
   position: number;
   fileIndex: number;
@@ -32,16 +31,15 @@ export default function HomePage() {
 
 
   return (
-    <>
-      <Head>
-        <title>Home Page</title>
-      </Head>
+    <section className="flex-1 p-4 lg:p-8">
       <div>
-
+        <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+          Let's dig !
+        </h1>
         <FileUploadForm addTrack={addTrack} setTracks={setTracks} />
         <ListTracks tracks={tracks} deleteTrack={deleteTrack} reset={reset} />
       </div>
-    </>
+    </section>
   );
 }
 
