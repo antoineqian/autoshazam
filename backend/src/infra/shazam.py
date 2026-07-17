@@ -37,7 +37,7 @@ async def shazam_file(filename, interval):
     dur = seg.duration_seconds
 
     iters = ceil(dur * 1000 / interval)
-    coros = [shazam_segment(seg[i*interval:(i+1)*interval], i) for i in range(iters)]
+    coros = [shazam_segment(seg[i*interval:(i+1)*interval], i*interval) for i in range(iters)]
     results = await asyncio.gather(*coros)
 
     end = time.time()
@@ -75,7 +75,7 @@ async def shazam_file_ws(filename, interval, websocket):
     dur = seg.duration_seconds
 
     iters = ceil(dur * 1000 / interval)
-    coros = [shazam_segment_ws(seg[i*interval:(i+1)*interval], i, websocket) for i in range(iters)]
+    coros = [shazam_segment_ws(seg[i*interval:(i+1)*interval], i*interval, websocket) for i in range(iters)]
     await asyncio.gather(*coros)
 
     end = time.time()
