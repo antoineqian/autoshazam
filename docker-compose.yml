@@ -1,9 +1,7 @@
-version: '3'
-
 services:
   frontend:
     container_name: frontend
-    build: ./frontend
+    build: ./front
     ports:
       - "3000:3000"
 
