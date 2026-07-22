@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   integer,
+  real,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -54,6 +55,21 @@ export const activityLogs = pgTable('activity_logs', {
   ipAddress: varchar('ip_address', { length: 45 }),
 });
 
+export const tracks = pgTable('tracks', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  userId: integer('user_id').references(() => users.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  subtitle: varchar('subtitle', { length: 255 }).notNull(),
+  position: real('position').notNull(),
+  fileIndex: integer('file_index').notNull().default(0),
+  url: text('url'),
+  uri: text('uri'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const invitations = pgTable('invitations', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -72,6 +88,18 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
   invitations: many(invitations),
+  tracks: many(tracks),
+}));
+
+export const tracksRelations = relations(tracks, ({ one }) => ({
+  team: one(teams, {
+    fields: [tracks.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [tracks.userId],
+    references: [users.id],
+  }),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -122,6 +150,8 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+export type Track = typeof tracks.$inferSelect;
+export type NewTrack = typeof tracks.$inferInsert;
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;
