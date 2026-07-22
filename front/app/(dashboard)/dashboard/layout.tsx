@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { FileSearch, Settings, Shield, Activity, Menu } from 'lucide-react';
+import { FileSearch, Library, Settings, Shield, Activity, Menu } from 'lucide-react';
 
 export default function DashboardLayout({
   children
@@ -16,6 +16,7 @@ export default function DashboardLayout({
 
   const navItems = [
     { href: '/dashboard', icon: FileSearch, label: 'Analysis' },
+    { href: '/dashboard/library', icon: Library, label: 'Library' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
     { href: '/dashboard/activity', icon: Activity, label: 'Activity' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' }

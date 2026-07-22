@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import { activityLogs, teamMembers, teams, tracks, users } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -97,6 +97,19 @@ export async function getActivityLogs() {
     .where(eq(activityLogs.userId, user.id))
     .orderBy(desc(activityLogs.timestamp))
     .limit(10);
+}
+
+export async function getTracksForTeam() {
+  const team = await getTeamForUser();
+  if (!team) {
+    return [];
+  }
+
+  return db
+    .select()
+    .from(tracks)
+    .where(eq(tracks.teamId, team.id))
+    .orderBy(desc(tracks.createdAt));
 }
 
 export async function getTeamForUser() {

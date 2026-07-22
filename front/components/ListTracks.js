@@ -4,6 +4,9 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import AudioPlayer from './AudioPlayer';
 
+/**
+ * @param {{ tracks: any[], deleteTrack: (id: number) => void, reset?: () => void }} props
+ */
 const ListTracks = ({ tracks, deleteTrack, reset }) => {
 
   function removeDuplicates(data, uniqueKeys) {
@@ -36,7 +39,7 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
 
 
   const trackList = sortedTracks ? sortedTracks.map((track) => (
-    <div key={track.position + "_" + track.fileIndex}>
+    <div key={track.id}>
       <li className="collection-item">
         <div className='track-info'>
           <span className="title">{track.subtitle} - {track.title}  </span><br></br>
@@ -47,7 +50,7 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
           <a href={track.url} target="_blank" rel="noopener noreferrer" title="Open in Shazam">
             <img src="shazam.svg" alt="Shazam Icon" className="icon" />
           </a>
-          <a href="#!" onClick={e => deleteTrack(track.position, track.fileIndex)} className="delete-icon" title="Remove from list">
+          <a href="#!" onClick={e => deleteTrack(track.id)} className="delete-icon" title="Remove from list">
             <img src="delete.svg" alt="Delete Icon" className="icon" />
           </a>
           <a href="#!" onClick={e => copyToClipBoard(`${track.subtitle} ${track.title}`)} title="Copy track info to clipboard">
@@ -63,8 +66,10 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
     <div className='container'>
       <h3>Results</h3>
       <p>{sortedTracks.length} tracks have been detected </p>
-      <button className="btn reset-btn" onClick={e => reset()}>
-        Reset </button>
+      {reset && (
+        <button className="btn reset-btn" onClick={e => reset()}>
+          Reset </button>
+      )}
       <ul className="collection">
         {trackList}
       </ul>
