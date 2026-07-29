@@ -37,6 +37,19 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
     toast('Successfully copied!')
   };
 
+  const exportToText = () => {
+    const lines = sortedTracks.map(track => `${track.subtitle} ${track.title}`).join('\n');
+    const blob = new Blob([lines], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'tracks.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
 
   const trackList = sortedTracks ? sortedTracks.map((track) => (
     <div key={track.id}>
@@ -48,13 +61,13 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
         <div className="button-container">
           <AudioPlayer audioSrc={track.uri} />
           <a href={track.url} target="_blank" rel="noopener noreferrer" title="Open in Shazam">
-            <img src="shazam.svg" alt="Shazam Icon" className="icon" />
+            <img src="/shazam.svg" alt="Shazam Icon" className="icon" />
           </a>
           <a href="#!" onClick={e => deleteTrack(track.id)} className="delete-icon" title="Remove from list">
-            <img src="delete.svg" alt="Delete Icon" className="icon" />
+            <img src="/delete.svg" alt="Delete Icon" className="icon" />
           </a>
           <a href="#!" onClick={e => copyToClipBoard(`${track.subtitle} ${track.title}`)} title="Copy track info to clipboard">
-            <img src="copy.svg" alt="Copy Icon" className="icon" />
+            <img src="/copy.svg" alt="Copy Icon" className="icon" />
           </a>
           <Toaster />
         </div>
@@ -69,6 +82,10 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
       {reset && (
         <button className="btn reset-btn" onClick={e => reset()}>
           Reset </button>
+      )}
+      {sortedTracks.length > 0 && (
+        <button className="btn export-btn" onClick={exportToText}>
+          Export to text </button>
       )}
       <ul className="collection">
         {trackList}
