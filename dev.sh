@@ -24,6 +24,14 @@ if ! docker start autoshazam-postgres >/dev/null 2>&1; then
     -p 5432:5432 postgres:16 >/dev/null
 fi
 
+echo "Waiting for Postgres..."
+until docker exec autoshazam-postgres pg_isready -U postgres >/dev/null 2>&1; do
+  sleep 1
+done
+
+(cd front && npm run db:migrate)
+(cd front && npm run db:ensure-dev-account)
+
 trap 'kill 0' EXIT
 
 (cd backend && ./.venv/bin/python -m uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000) &
@@ -31,4 +39,5 @@ trap 'kill 0' EXIT
 
 echo "Backend:  http://localhost:8000/docs"
 echo "Frontend: http://localhost:3000"
+echo "Dev login: test@test.com / admin123 (active plan)"
 wait
