@@ -46,7 +46,12 @@ export async function deleteTrackAction(id: number) {
     throw new Error('Team not found');
   }
 
-  await db
+  const deleted = await db
     .delete(tracks)
-    .where(and(eq(tracks.id, id), eq(tracks.teamId, team.id)));
+    .where(and(eq(tracks.id, id), eq(tracks.teamId, team.id)))
+    .returning({ id: tracks.id });
+
+  if (deleted.length === 0) {
+    throw new Error(`Track ${id} was not found or already deleted`);
+  }
 }

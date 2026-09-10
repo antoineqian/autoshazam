@@ -29,8 +29,8 @@ const AudioPlayer = ({ audioSrc }) => {
         title={playing ? "Pause" : "Play"}
       >
         {playing ?
-          <img src="pause.svg" alt="Pause Icon" className="icon" />
-          : <img src="play-button.svg" alt="Play Icon" className="icon" />
+          <img src="/pause.svg" alt="Pause Icon" className="icon" />
+          : <img src="/play-button.svg" alt="Play Icon" className="icon" />
         }
       </button>
     </div>

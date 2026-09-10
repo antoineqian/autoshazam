@@ -292,6 +292,14 @@
     background-color: rgb(130, 170, 50);
   }
 
+  .export-btn {
+    background: #2196f3;
+  }
+
+  .export-btn:hover {
+    background-color: #1e88e5;
+  }
+
   .submit-btn {
     background: #4caf50;
   }
