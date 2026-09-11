@@ -29,21 +29,20 @@ Run the backend via the `uvicorn` python module:
 
 The library can fetch the audio file of a detected track from the Soulseek network: a download icon on each track, and a "Download missing" button on each source. The backend searches, keeps only the formats you allow (Settings › General › Soulseek downloads), scores every result against the artist and title, and downloads the best one on its own, or asks you to choose between at most three when it is not sure.
 
-It needs a Soulseek account, set on the backend:
+It needs a Soulseek account. Copy `backend/.env.example` to `backend/.env` and fill it in:
 
 ```
-export SOULSEEK_ACCOUNT=your_login
-export SOULSEEK_PASSWORD=your_password
-export SOULSEEK_LISTEN_PORT=2234      # optional, default 2234
-export SOULSEEK_DOWNLOAD_DIR=./downloads   # optional
+cp backend/.env.example backend/.env
 ```
 
-Peers connect back to the listening port, so forward it on your router (TCP) or most downloads will sit in the queue forever. Without an account the buttons simply do not appear.
+The backend reads that file on its own, so `./dev.sh` starts it with no secrets on the command line. `backend/.env` is gitignored, and a real environment variable always wins over it, which is how Docker Compose and CI keep passing values in.
+
+Peers connect back to the listening port, so forward it on your router (TCP) or most downloads will sit in the queue forever. Without an account the buttons simply do not appear in the library.
 
 Files are saved as `<download dir>/<source name>/<Artist - Title>.<ext>`, one folder per analysed mix. To check the pipeline against the live network without the UI:
 
 ```
-cd backend && SOULSEEK_ACCOUNT=... SOULSEEK_PASSWORD=... .venv/bin/python -m scripts.soulseek_smoke "DJ Koze - Pick Up" "Objekt - Ruff Dug"
+cd backend && .venv/bin/python -m scripts.soulseek_smoke "DJ Koze - Pick Up" "Objekt - Ruff Dug"
 ```
 
 Add `--download` to actually fetch what would be downloaded automatically.

@@ -8,6 +8,19 @@ if [ ! -d backend/.venv ]; then
   echo "backend/.venv not found. Run: cd backend && python3.11 -m venv .venv && ./.venv/bin/pip install -r requirements.txt" >&2
   exit 1
 fi
+
+# Pulling a branch that adds a Python dependency otherwise leaves the venv
+# behind, and the backend dies at import with nothing listening on :8000. Only
+# reinstall when requirements.txt actually changed, so the usual start stays
+# instant.
+requirements_stamp=backend/.venv/.requirements-sha
+requirements_sha=$(shasum backend/requirements.txt | cut -d" " -f1)
+if [ "$(cat "$requirements_stamp" 2>/dev/null || true)" != "$requirements_sha" ]; then
+  echo "Backend requirements changed, installing..."
+  backend/.venv/bin/pip install -q -r backend/requirements.txt
+  echo "$requirements_sha" > "$requirements_stamp"
+fi
+
 if [ ! -d front/node_modules ]; then
   echo "front/node_modules not found. Run: cd front && npm install -f" >&2
   exit 1
@@ -29,8 +42,8 @@ until docker exec autoshazam-postgres pg_isready -U postgres >/dev/null 2>&1; do
   sleep 1
 done
 
-if [ -z "${SOULSEEK_ACCOUNT:-}" ]; then
-  echo "SOULSEEK_ACCOUNT is not set: Soulseek downloads are disabled (see README)." >&2
+if [ -z "${SOULSEEK_ACCOUNT:-}" ] && ! grep -qs "^SOULSEEK_ACCOUNT=." backend/.env; then
+  echo "No Soulseek account in backend/.env: track downloads are disabled (see README)." >&2
 fi
 
 (cd front && npm run db:migrate)
