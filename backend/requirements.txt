@@ -7,3 +7,4 @@ socketio
 yt-dlp[default]
 aioslsk
 rapidfuzz
+python-dotenv

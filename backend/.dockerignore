@@ -1,3 +1,6 @@
 Dockerfile
 tests
 storage
+.env
+.venv
+downloads
