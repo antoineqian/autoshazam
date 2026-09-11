@@ -5,6 +5,7 @@ from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from yt_dlp import YoutubeDL
 
+from ..infra.downloader import build_ydl_opts
 from ..infra.processor import PathWriter
 from ..infra.shazam import shazam_file, shazam_file_ws
 
@@ -55,7 +56,7 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int = For
 async def processUrl(url: str = Form(...), interval: int = Form(...)):
     print(f"Processing url {url} with {interval} seconds")
     file_location = "./storage/%(title)s.%(ext)s"
-    ydl_opts = {"outtmpl": file_location}
+    ydl_opts = build_ydl_opts(file_location)
     with YoutubeDL(ydl_opts) as ydl:
         ydl.add_post_processor(PathWriter(), when="post_process")
         ydl.download(url)
@@ -102,7 +103,7 @@ async def ws_processUrl(websocket: WebSocket):
     url = await websocket.receive_text()
     interval = int(await websocket.receive_text())
     file_location = "./storage/%(title)s.%(ext)s"
-    ydl_opts = {"outtmpl": file_location}
+    ydl_opts = build_ydl_opts(file_location)
     with YoutubeDL(ydl_opts) as ydl:
         ydl.add_post_processor(PathWriter(), when="post_process")
         ydl.download(url)

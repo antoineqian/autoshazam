@@ -13,6 +13,9 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 #RUN apt-get -y update && apt-get -y upgrade && apt-get install --no-install-recommends -y ffmpeg && rm -rf /var/lib/apt/lists/*
 COPY --from=mwader/static-ffmpeg:6.1.1 /ffmpeg /usr/local/bin/
 COPY --from=mwader/static-ffmpeg:6.1.1 /ffprobe /usr/local/bin/
+# yt-dlp needs a JavaScript runtime to solve YouTube's signature challenges;
+# without one most formats are unavailable.
+COPY --from=denoland/deno:bin-2.5.3 /deno /usr/local/bin/
 WORKDIR /code
 COPY . /code/
 CMD ["python", "-m", "uvicorn", "src.app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
