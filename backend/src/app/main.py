@@ -1,5 +1,6 @@
 import json
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Form, WebSocket
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,8 +9,18 @@ from yt_dlp import YoutubeDL
 from ..infra.downloader import build_ydl_opts
 from ..infra.processor import PathWriter
 from ..infra.shazam import shazam_file, shazam_file_ws
+from .soulseek import router as soulseek_router, shutdown_manager
 
-app = FastAPI()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    # Log out of Soulseek cleanly so the account is not left half-connected.
+    await shutdown_manager()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,6 +29,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(soulseek_router)
 
 
 @app.post("/processFolder")
