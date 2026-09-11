@@ -1,5 +1,5 @@
 import { getTracksForTeam } from '@/lib/db/queries';
-import { LibraryList } from './library-list';
+import { LibraryView } from './library-view';
 
 export default async function LibraryPage() {
   const tracks = await getTracksForTeam();
@@ -9,7 +9,7 @@ export default async function LibraryPage() {
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         Library
       </h1>
-      <LibraryList initialTracks={tracks} />
+      <LibraryView initialTracks={tracks} />
     </section>
   );
 }
