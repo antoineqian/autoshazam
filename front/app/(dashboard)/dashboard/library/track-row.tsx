@@ -28,7 +28,9 @@ export function TrackRow({
     <li className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 group">
       <input
         type="checkbox"
-        checked={track.downloaded}
+        // Always a boolean so the input stays controlled: client state can
+        // briefly hold tracks that predate the flag (e.g. across a hot reload).
+        checked={Boolean(track.downloaded)}
         onChange={(e) => onToggleDownloaded(track.id, e.target.checked)}
         title={
           track.downloaded
