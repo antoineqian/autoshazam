@@ -1,0 +1,1 @@
+ALTER TABLE "tracks" ADD COLUMN "downloaded" boolean DEFAULT false NOT NULL;

@@ -6,6 +6,7 @@ import {
   timestamp,
   integer,
   real,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -89,6 +90,10 @@ export const tracks = pgTable('tracks', {
   fileIndex: integer('file_index').notNull().default(0),
   url: text('url'),
   uri: text('uri'),
+  // Whether this track has been added to the user's own collection. Held per
+  // row but kept identical across every row of the same track, since owning a
+  // file is a fact about the track, not about the mix it turned up in.
+  downloaded: boolean('downloaded').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
