@@ -1,6 +1,7 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, tracks, users } from './schema';
+import { activityLogs, sources, teamMembers, teams, tracks, users } from './schema';
+import type { TrackWithSource } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -99,17 +100,20 @@ export async function getActivityLogs() {
     .limit(10);
 }
 
-export async function getTracksForTeam() {
+export async function getTracksForTeam(): Promise<TrackWithSource[]> {
   const team = await getTeamForUser();
   if (!team) {
     return [];
   }
 
-  return db
-    .select()
+  const rows = await db
+    .select({ track: tracks, source: sources })
     .from(tracks)
+    .leftJoin(sources, eq(tracks.sourceId, sources.id))
     .where(eq(tracks.teamId, team.id))
     .orderBy(desc(tracks.createdAt));
+
+  return rows.map((row) => ({ ...row.track, source: row.source }));
 }
 
 export async function getTeamForUser() {
