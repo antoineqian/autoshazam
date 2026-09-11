@@ -25,6 +25,29 @@ Run the backend via the `uvicorn` python module:
 `uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000`
 
 
+## Downloading tracks from Soulseek (optional)
+
+The library can fetch the audio file of a detected track from the Soulseek network: a download icon on each track, and a "Download missing" button on each source. The backend searches, keeps only the formats you allow (Settings › General › Soulseek downloads), scores every result against the artist and title, and downloads the best one on its own, or asks you to choose between at most three when it is not sure.
+
+It needs a Soulseek account, set on the backend:
+
+```
+export SOULSEEK_ACCOUNT=your_login
+export SOULSEEK_PASSWORD=your_password
+export SOULSEEK_LISTEN_PORT=2234      # optional, default 2234
+export SOULSEEK_DOWNLOAD_DIR=./downloads   # optional
+```
+
+Peers connect back to the listening port, so forward it on your router (TCP) or most downloads will sit in the queue forever. Without an account the buttons simply do not appear.
+
+Files are saved as `<download dir>/<source name>/<Artist - Title>.<ext>`, one folder per analysed mix. To check the pipeline against the live network without the UI:
+
+```
+cd backend && SOULSEEK_ACCOUNT=... SOULSEEK_PASSWORD=... .venv/bin/python -m scripts.soulseek_smoke "DJ Koze - Pick Up" "Objekt - Ruff Dug"
+```
+
+Add `--download` to actually fetch what would be downloaded automatically.
+
 ## Install and run frontend and backend using `docker-compose`
 
 If you have `docker` and `docker-compose` installed, it might be easier (and much lighter!) for you to simply build and run the containers:
@@ -43,6 +66,6 @@ Just to give you an idea, thanks to multi-stage Docker building and slim package
 - Scrap youtube url from shazam info page
 - Tests !
 - ~~Containerize~~
-- Integrate with a media downloader
+- ~~Integrate with a media downloader~~ (Soulseek)
 
 Suggestions are welcome !

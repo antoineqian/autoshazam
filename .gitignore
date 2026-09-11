@@ -21,3 +21,7 @@ front/.env
 .prettierrc
 
 *.env
+
+# Soulseek downloads and the backend virtualenv
+downloads/
+backend/.venv

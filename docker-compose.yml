@@ -10,3 +10,12 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+      # Soulseek peers connect back to this port; forward it on your router too.
+      - "2234:2234"
+    environment:
+      - SOULSEEK_ACCOUNT=${SOULSEEK_ACCOUNT:-}
+      - SOULSEEK_PASSWORD=${SOULSEEK_PASSWORD:-}
+      - SOULSEEK_LISTEN_PORT=2234
+      - SOULSEEK_DOWNLOAD_DIR=/code/downloads
+    volumes:
+      - ./downloads:/code/downloads
