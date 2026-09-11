@@ -19,7 +19,7 @@ export type UniqueTrack = TrackWithSource & {
   sourceLabels: string[];
 };
 
-const identity = (track: TrackWithSource) =>
+export const identity = (track: { title: string; subtitle: string }) =>
   `${track.title} ${track.subtitle}`.toLowerCase();
 
 /**

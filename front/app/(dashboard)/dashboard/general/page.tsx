@@ -11,6 +11,7 @@ import { User, TeamDataWithMembers } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 import { customerPortalAction } from '@/lib/payments/actions';
+import { DownloadPreferencesCard } from './download-preferences-card';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -163,6 +164,7 @@ export default function GeneralPage() {
       <Suspense fallback={<SubscriptionSkeleton />}>
         <ManageSubscription />
       </Suspense>
+      <DownloadPreferencesCard />
     </section>
   );
 }
