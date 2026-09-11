@@ -6,8 +6,8 @@ import { deleteTrackAction } from './actions';
 import type { Track } from '@/lib/db/schema';
 
 /**
- * Track list state shared by the analysis page and the library, so both delete
- * through the same path and stay consistent with each other.
+ * Track list state for the analysis page. Everything here belongs to the run
+ * currently being analysed, so deleting matches the server's per-run rule.
  */
 export function useTrackList(initialTracks: Track[] = []) {
   const [tracks, setTracks] = useState<Track[]>(initialTracks);
@@ -19,13 +19,15 @@ export function useTrackList(initialTracks: Track[] = []) {
       return;
     }
 
-    // Matches what deleteTrackAction removes on the server: every detection of
-    // this track, not just the row whose id was clicked. Filtering by id alone
-    // would leave the duplicates behind and the row would redraw unchanged.
+    // Mirrors deleteTrackAction: every detection of this track within the same
+    // run goes. Filtering by id alone would leave the other detections behind
+    // and the collapsed row would redraw unchanged.
     setTracks((prevTracks) =>
       prevTracks.filter(
         (track) =>
-          track.title !== target.title || track.subtitle !== target.subtitle
+          track.sourceId !== target.sourceId ||
+          track.title !== target.title ||
+          track.subtitle !== target.subtitle
       )
     );
 

@@ -40,6 +40,12 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int = For
             results = await shazam_file(file_location, interval)
             for r in results:
                 r["fileIndex"] = i
+                # The library groups tracks by the run they came from, so the
+                # filename has to travel with the results instead of only
+                # being logged.
+                r["sourceLabel"] = file.filename
+                r["sourceKind"] = "file"
+                r["intervalMinutes"] = interval
             all_results.extend(results)
         except Exception as e:
             print("Exception caught")
@@ -109,6 +115,20 @@ async def ws_processUrl(websocket: WebSocket):
 
     with open("storage/path.json", "r") as f:
         file_location = json.load(f)
-        await shazam_file_ws(file_location, interval, websocket)
+
+    # Announce the run before streaming any tracks, so the client can record
+    # the source they belong to. yt-dlp names the file after the media title,
+    # which reads far better in the library than the raw URL.
+    await websocket.send_json(
+        {
+            "type": "source",
+            "kind": "url",
+            "label": os.path.splitext(os.path.basename(file_location))[0],
+            "url": url,
+            "intervalMinutes": interval,
+        }
+    )
+
+    await shazam_file_ws(file_location, interval, websocket)
 
     await websocket.send_text("DONE")
