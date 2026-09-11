@@ -17,6 +17,7 @@ export function SourceGroup({
   expanded,
   onToggle,
   onDeleteTrack,
+  onToggleDownloaded,
   onDeleteSource,
   onRenameSource,
   onExport,
@@ -27,6 +28,7 @@ export function SourceGroup({
   onToggle: () => void;
   sourceLabelsFor: (track: { title: string; subtitle: string }) => string[];
   onDeleteTrack: (id: number) => void;
+  onToggleDownloaded: (id: number, downloaded: boolean) => void;
   onDeleteSource: (id: number) => void;
   onRenameSource: (id: number, label: string) => void;
   onExport: (group: SourceGroupModel) => void;
@@ -142,6 +144,7 @@ export function SourceGroup({
               track={track}
               sourceLabels={sourceLabelsFor(track)}
               onDelete={onDeleteTrack}
+              onToggleDownloaded={onToggleDownloaded}
               deleteTitle="Remove from this source"
             />
           ))}

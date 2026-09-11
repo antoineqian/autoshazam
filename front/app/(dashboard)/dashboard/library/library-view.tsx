@@ -23,6 +23,7 @@ import {
   deleteTrackAction,
   deleteTrackEverywhereAction,
   renameSourceAction,
+  setTrackDownloadedAction,
 } from '@/lib/tracks/actions';
 import type { TrackWithSource } from '@/lib/db/schema';
 
@@ -30,6 +31,14 @@ const SOURCE_SORTS: { value: SourceSort; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
   { value: 'name', label: 'Name A–Z' },
+];
+
+type DownloadFilter = 'all' | 'missing' | 'downloaded';
+
+const DOWNLOAD_FILTERS: { value: DownloadFilter; label: string }[] = [
+  { value: 'all', label: 'Any status' },
+  { value: 'missing', label: 'Not downloaded' },
+  { value: 'downloaded', label: 'Downloaded' },
 ];
 
 const TRACK_SORTS: { value: TrackSort; label: string }[] = [
@@ -61,7 +70,7 @@ export function LibraryView({
   const [query, setQuery] = useState('');
   const [sourceSort, setSourceSort] = useState<SourceSort>('newest');
   const [trackSort, setTrackSort] = useState<TrackSort>('recent');
-  const [multiOnly, setMultiOnly] = useState(false);
+  const [downloadFilter, setDownloadFilter] = useState<DownloadFilter>('all');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -95,15 +104,15 @@ export function LibraryView({
       if (!matchesQuery(track, query)) {
         return false;
       }
-      if (multiOnly) {
-        const labels =
-          sourceLabels.get(`${track.title} ${track.subtitle}`.toLowerCase()) ??
-          [];
-        return labels.length > 1;
+      if (downloadFilter === 'missing') {
+        return !track.downloaded;
+      }
+      if (downloadFilter === 'downloaded') {
+        return track.downloaded;
       }
       return true;
     });
-  }, [tracks, query, multiOnly, sourceLabels]);
+  }, [tracks, query, downloadFilter]);
 
   const groups = useMemo(
     () => groupBySource(visible, sourceSort),
@@ -126,6 +135,16 @@ export function LibraryView({
         tracks.map((track) =>
           `${track.title} ${track.subtitle}`.toLowerCase()
         )
+      ).size,
+    [tracks]
+  );
+
+  const downloadedTracks = useMemo(
+    () =>
+      new Set(
+        tracks
+          .filter((track) => track.downloaded)
+          .map((track) => `${track.title} ${track.subtitle}`.toLowerCase())
       ).size,
     [tracks]
   );
@@ -175,6 +194,22 @@ export function LibraryView({
         ),
       () => deleteTrackEverywhereAction(id),
       'Could not remove that track, please try again'
+    );
+  };
+
+  const toggleDownloaded = (id: number, downloaded: boolean) => {
+    const target = tracks.find((track) => track.id === id);
+    if (!target) return;
+
+    return withRollback(
+      (current) =>
+        current.map((track) =>
+          track.title === target.title && track.subtitle === target.subtitle
+            ? { ...track, downloaded }
+            : track
+        ),
+      () => setTrackDownloadedAction(id, downloaded),
+      'Could not update that track, please try again'
     );
   };
 
@@ -337,14 +372,21 @@ export function LibraryView({
             )}
           </label>
 
-          <label className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={multiOnly}
-              onChange={(e) => setMultiOnly(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            Found in 2+ sources
+          <label className="flex items-center gap-1.5 text-sm text-gray-600">
+            <span className="sr-only">Filter by download status</span>
+            <select
+              value={downloadFilter}
+              onChange={(e) =>
+                setDownloadFilter(e.target.value as DownloadFilter)
+              }
+              className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
+            >
+              {DOWNLOAD_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
 
           {view === 'by-source' && groups.length > 1 && (
@@ -372,8 +414,10 @@ export function LibraryView({
           </button>
 
           <p className="ml-auto text-sm text-gray-500">
-            {totalTracks} track{totalTracks === 1 ? '' : 's'} · {totalRuns}{' '}
-            source{totalRuns === 1 ? '' : 's'}
+            <span className="font-medium text-gray-900">
+              {downloadedTracks}/{totalTracks}
+            </span>{' '}
+            downloaded · {totalRuns} source{totalRuns === 1 ? '' : 's'}
           </p>
         </div>
       </div>
@@ -387,7 +431,7 @@ export function LibraryView({
             type="button"
             onClick={() => {
               setQuery('');
-              setMultiOnly(false);
+              setDownloadFilter('all');
             }}
             className="mt-3 text-sm font-medium text-orange-600 hover:underline"
           >
@@ -403,6 +447,7 @@ export function LibraryView({
               expanded={!collapsed.has(group.key)}
               onToggle={() => toggleGroup(group.key)}
               onDeleteTrack={deleteFromSource}
+              onToggleDownloaded={toggleDownloaded}
               onDeleteSource={deleteSource}
               onRenameSource={renameSource}
               onExport={exportGroup}
@@ -418,6 +463,7 @@ export function LibraryView({
               track={track}
               sourceLabels={track.sourceLabels}
               onDelete={deleteEverywhere}
+              onToggleDownloaded={toggleDownloaded}
               deleteTitle="Remove from every source"
             />
           ))}
