@@ -10,11 +10,13 @@ export function TrackRow({
   track,
   sourceLabels,
   onDelete,
+  onToggleDownloaded,
   deleteTitle,
 }: {
   track: TrackWithSource;
   sourceLabels?: string[];
   onDelete: (id: number) => void;
+  onToggleDownloaded: (id: number, downloaded: boolean) => void;
   deleteTitle: string;
 }) {
   const copyToClipboard = () => {
@@ -24,15 +26,38 @@ export function TrackRow({
 
   return (
     <li className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 group">
+      <input
+        type="checkbox"
+        checked={track.downloaded}
+        onChange={(e) => onToggleDownloaded(track.id, e.target.checked)}
+        title={
+          track.downloaded
+            ? 'In your collection - click to unmark'
+            : 'Mark as downloaded'
+        }
+        aria-label={`Mark ${track.subtitle} - ${track.title} as downloaded`}
+        className="h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+      />
+
       <span className="w-16 shrink-0 text-xs tabular-nums text-gray-500">
         {formatPosition(track.position)}
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900">
+        <p
+          className={`truncate text-sm font-medium ${
+            track.downloaded ? 'text-gray-400' : 'text-gray-900'
+          }`}
+        >
           {track.title}
         </p>
-        <p className="truncate text-xs text-gray-500">{track.subtitle}</p>
+        <p
+          className={`truncate text-xs ${
+            track.downloaded ? 'text-gray-400' : 'text-gray-500'
+          }`}
+        >
+          {track.subtitle}
+        </p>
       </div>
 
       {sourceLabels && sourceLabels.length > 1 && (

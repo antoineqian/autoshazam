@@ -204,6 +204,46 @@ export async function deleteTrackEverywhereAction(id: number) {
   return deleted.map((row) => row.id);
 }
 
+/**
+ * Marks a track as being in the user's own collection, or not.
+ *
+ * The flag is written to every row of that track across every run: having the
+ * file is a fact about the track itself, so a track marked downloaded in one
+ * mix must not look missing in another.
+ */
+export async function setTrackDownloadedAction(id: number, downloaded: boolean) {
+  const team = await getTeamForUser();
+  if (!team) {
+    throw new Error('Team not found');
+  }
+
+  const [target] = await db
+    .select({ title: tracks.title, subtitle: tracks.subtitle })
+    .from(tracks)
+    .where(and(eq(tracks.id, id), eq(tracks.teamId, team.id)))
+    .limit(1);
+
+  if (!target) {
+    throw new Error(`Track ${id} was not found`);
+  }
+
+  const updated = await db
+    .update(tracks)
+    .set({ downloaded })
+    .where(
+      and(
+        eq(tracks.teamId, team.id),
+        eq(tracks.title, target.title),
+        eq(tracks.subtitle, target.subtitle)
+      )
+    )
+    .returning({ id: tracks.id });
+
+  revalidatePath('/dashboard/library');
+
+  return updated.map((row) => row.id);
+}
+
 /** Removes a whole run and everything detected in it. */
 export async function deleteSourceAction(id: number) {
   const team = await getTeamForUser();
