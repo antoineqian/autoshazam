@@ -7,6 +7,7 @@ import {
   integer,
   real,
   boolean,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -111,11 +112,70 @@ export const invitations = pgTable('invitations', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
 
+/** Soulseek search preferences, one row per team; defaults apply when absent. */
+export const downloadPreferences = pgTable('download_preferences', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id)
+    .unique(),
+  formatPriority: jsonb('format_priority')
+    .$type<string[]>()
+    .notNull()
+    .default(['flac', 'mp3']),
+  // null = any bitrate
+  minMp3Bitrate: integer('min_mp3_bitrate'),
+  autoDownload: boolean('auto_download').notNull().default(true),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+/**
+ * One file fetched from Soulseek. Keyed by title and subtitle like the
+ * `downloaded` flag, so any row of that track can point at where the file is.
+ */
+export const downloads = pgTable('downloads', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  sourceId: integer('source_id').references(() => sources.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  subtitle: varchar('subtitle', { length: 255 }).notNull(),
+  localPath: text('local_path').notNull(),
+  remoteUser: varchar('remote_user', { length: 255 }),
+  format: varchar('format', { length: 10 }),
+  bitrate: integer('bitrate'),
+  matchScore: real('match_score'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
   invitations: many(invitations),
   tracks: many(tracks),
+  downloads: many(downloads),
+}));
+
+export const downloadPreferencesRelations = relations(
+  downloadPreferences,
+  ({ one }) => ({
+    team: one(teams, {
+      fields: [downloadPreferences.teamId],
+      references: [teams.id],
+    }),
+  })
+);
+
+export const downloadsRelations = relations(downloads, ({ one }) => ({
+  team: one(teams, {
+    fields: [downloads.teamId],
+    references: [teams.id],
+  }),
+  source: one(sources, {
+    fields: [downloads.sourceId],
+    references: [sources.id],
+  }),
 }));
 
 export const sourcesRelations = relations(sources, ({ one, many }) => ({
@@ -194,6 +254,10 @@ export type NewTrack = typeof tracks.$inferInsert;
 export type Source = typeof sources.$inferSelect;
 export type NewSource = typeof sources.$inferInsert;
 export type TrackWithSource = Track & { source: Source | null };
+export type DownloadPreferencesRow = typeof downloadPreferences.$inferSelect;
+export type NewDownloadPreferences = typeof downloadPreferences.$inferInsert;
+export type Download = typeof downloads.$inferSelect;
+export type NewDownload = typeof downloads.$inferInsert;
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;

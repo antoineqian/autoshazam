@@ -5,3 +5,5 @@ websockets
 shazamio
 socketio
 yt-dlp[default]
+aioslsk
+rapidfuzz

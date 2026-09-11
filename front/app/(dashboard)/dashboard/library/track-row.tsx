@@ -2,9 +2,12 @@
 
 import copy from 'clipboard-copy';
 import toast from 'react-hot-toast';
+import { Download } from 'lucide-react';
 import AudioPlayer from '@/components/AudioPlayer';
+import { DownloadStatus } from './download-status';
 import { formatPosition } from '@/lib/tracks/library-model';
 import type { TrackWithSource } from '@/lib/db/schema';
+import type { Candidate, Item } from '@/lib/soulseek/types';
 
 export function TrackRow({
   track,
@@ -12,17 +15,36 @@ export function TrackRow({
   onDelete,
   onToggleDownloaded,
   deleteTitle,
+  downloadState,
+  onDownload,
+  onChoose,
+  onSkip,
+  onRetry,
 }: {
   track: TrackWithSource;
   sourceLabels?: string[];
   onDelete: (id: number) => void;
   onToggleDownloaded: (id: number, downloaded: boolean) => void;
   deleteTitle: string;
+  /** Soulseek item for this track, when a job has been started for it. */
+  downloadState?: Item;
+  onDownload?: () => void;
+  onChoose?: (candidate: Candidate) => void;
+  onSkip?: () => void;
+  onRetry?: () => void;
 }) {
   const copyToClipboard = () => {
     copy(`${track.subtitle} ${track.title}`);
     toast('Copied to clipboard');
   };
+
+  // Done flips the checkbox and the badge goes away; a skipped track is back
+  // to square one and can be requested again.
+  const showBadge =
+    downloadState &&
+    downloadState.status !== 'done' &&
+    downloadState.status !== 'skipped';
+  const showDownload = !track.downloaded && onDownload && !showBadge;
 
   return (
     <li className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 group">
@@ -71,6 +93,15 @@ export function TrackRow({
         </span>
       )}
 
+      {showBadge && (
+        <DownloadStatus
+          item={downloadState}
+          onChoose={onChoose}
+          onSkip={onSkip}
+          onRetry={onRetry}
+        />
+      )}
+
       <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         {track.uri && <AudioPlayer audioSrc={track.uri} />}
 
@@ -96,6 +127,18 @@ export function TrackRow({
           <img src="/copy.svg" alt="" className="h-4 w-4" />
           <span className="sr-only">Copy {track.title}</span>
         </button>
+
+        {showDownload && (
+          <button
+            type="button"
+            onClick={onDownload}
+            title="Download from Soulseek"
+            className="rounded p-1.5 text-gray-600 hover:bg-orange-100 hover:text-orange-700"
+          >
+            <Download className="h-4 w-4" />
+            <span className="sr-only">Download {track.title} from Soulseek</span>
+          </button>
+        )}
 
         <button
           type="button"

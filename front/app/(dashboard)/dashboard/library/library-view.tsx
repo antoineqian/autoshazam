@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Search, X } from 'lucide-react';
 import { SourceGroup } from './source-group';
+import type { RowDownloads } from './source-group';
 import { TrackRow } from './track-row';
 import {
   countSourcesPerTrack,
@@ -26,6 +27,10 @@ import {
   setTrackDownloadedAction,
 } from '@/lib/tracks/actions';
 import type { TrackWithSource } from '@/lib/db/schema';
+import { useSoulseekJobs } from '@/lib/soulseek/use-soulseek-jobs';
+import { isActive } from '@/lib/soulseek/types';
+import type { Item } from '@/lib/soulseek/types';
+import type { DownloadPreferences } from '@/lib/soulseek/preferences';
 
 const SOURCE_SORTS: { value: SourceSort; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
@@ -62,8 +67,10 @@ function downloadTracklist(filename: string, lines: string[]) {
 
 export function LibraryView({
   initialTracks,
+  initialPreferences,
 }: {
   initialTracks: TrackWithSource[];
+  initialPreferences: DownloadPreferences;
 }) {
   const [tracks, setTracks] = useState(initialTracks);
   const [view, setView] = useState<ViewMode>('by-source');
@@ -96,6 +103,21 @@ export function LibraryView({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  // A finished Soulseek download is already recorded server-side by the hook;
+  // this only mirrors it locally, like toggleDownloaded does for the checkbox.
+  const markDownloaded = useCallback((item: Item) => {
+    setTracks((current) =>
+      current.map((track) =>
+        track.title === item.title && track.subtitle === item.subtitle
+          ? { ...track, downloaded: true }
+          : track
+      )
+    );
+  }, []);
+
+  const soulseek = useSoulseekJobs({ onDownloaded: markDownloaded });
+  const soulseekReady = soulseek.status?.configured === true;
 
   const sourceLabels = useMemo(() => countSourcesPerTrack(tracks), [tracks]);
 
@@ -266,6 +288,46 @@ export function LibraryView({
 
   const sourceLabelsFor = (track: { title: string; subtitle: string }) =>
     sourceLabels.get(`${track.title} ${track.subtitle}`.toLowerCase()) ?? [];
+
+  const rowDownloads: RowDownloads | undefined = soulseekReady
+    ? {
+        itemFor: soulseek.itemFor,
+        start: (track, sourceLabel) =>
+          soulseek.startDownload(
+            [
+              {
+                title: track.title,
+                subtitle: track.subtitle,
+                sourceLabel,
+                sourceId: track.sourceId,
+              },
+            ],
+            initialPreferences
+          ),
+        choose: soulseek.choose,
+        skip: soulseek.skip,
+        retry: soulseek.retry,
+      }
+    : undefined;
+
+  /** Tracks of a group that still need a file and have no job in flight. */
+  const missingIn = (group: SourceGroupModel) =>
+    group.tracks.filter((track) => {
+      if (track.downloaded) return false;
+      const item = soulseek.itemFor(track);
+      return !item || !isActive(item.status);
+    });
+
+  const downloadMissing = (group: SourceGroupModel) =>
+    soulseek.startDownload(
+      missingIn(group).map((track) => ({
+        title: track.title,
+        subtitle: track.subtitle,
+        sourceLabel: group.label,
+        sourceId: track.sourceId,
+      })),
+      initialPreferences
+    );
 
   const allCollapsed = groups.length > 0 && collapsed.size >= groups.length;
 
@@ -452,21 +514,50 @@ export function LibraryView({
               onRenameSource={renameSource}
               onExport={exportGroup}
               sourceLabelsFor={sourceLabelsFor}
+              downloads={rowDownloads}
+              missingCount={soulseekReady ? missingIn(group).length : 0}
+              onDownloadMissing={
+                soulseekReady ? () => downloadMissing(group) : undefined
+              }
             />
           ))}
         </div>
       ) : (
         <ul className="rounded-lg border border-gray-200 bg-white p-1.5">
-          {flat.map((track) => (
-            <TrackRow
-              key={track.id}
-              track={track}
-              sourceLabels={track.sourceLabels}
-              onDelete={deleteEverywhere}
-              onToggleDownloaded={toggleDownloaded}
-              deleteTitle="Remove from every source"
-            />
-          ))}
+          {flat.map((track) => {
+            const item = rowDownloads?.itemFor(track);
+            return (
+              <TrackRow
+                key={track.id}
+                track={track}
+                sourceLabels={track.sourceLabels}
+                onDelete={deleteEverywhere}
+                onToggleDownloaded={toggleDownloaded}
+                deleteTitle="Remove from every source"
+                downloadState={item}
+                onDownload={
+                  rowDownloads
+                    ? () =>
+                        rowDownloads.start(
+                          track,
+                          track.sourceLabels[0] ?? 'Unknown source'
+                        )
+                    : undefined
+                }
+                onChoose={
+                  rowDownloads && item
+                    ? (candidate) => rowDownloads.choose(item, candidate)
+                    : undefined
+                }
+                onSkip={
+                  rowDownloads && item ? () => rowDownloads.skip(item) : undefined
+                }
+                onRetry={
+                  rowDownloads && item ? () => rowDownloads.retry(item) : undefined
+                }
+              />
+            );
+          })}
         </ul>
       )}
     </div>

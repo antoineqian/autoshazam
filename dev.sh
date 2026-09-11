@@ -29,6 +29,10 @@ until docker exec autoshazam-postgres pg_isready -U postgres >/dev/null 2>&1; do
   sleep 1
 done
 
+if [ -z "${SOULSEEK_ACCOUNT:-}" ]; then
+  echo "SOULSEEK_ACCOUNT is not set: Soulseek downloads are disabled (see README)." >&2
+fi
+
 (cd front && npm run db:migrate)
 (cd front && npm run db:ensure-dev-account)
 
