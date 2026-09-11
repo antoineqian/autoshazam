@@ -18,6 +18,8 @@ apt-get install ffmpeg # Optional (note: use brew install ffmpeg if on macOS)
 pip install -r requirements.txt
 ```
 
+YouTube URLs additionally need a JavaScript runtime (`deno`, `node`, `bun` or `quickjs`) on the `PATH`, which `yt-dlp` uses to solve YouTube's signature challenges; without one most formats are unavailable. Any of them will do, e.g. `brew install deno` (the Docker image ships `deno`).
+
 Run the backend via the `uvicorn` python module:
 
 `uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000`
