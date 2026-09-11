@@ -1,6 +1,7 @@
 'use server';
 
 import { and, eq } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { tracks } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
@@ -37,6 +38,8 @@ export async function saveTrackAction(input: {
     })
     .returning();
 
+  revalidatePath('/dashboard/library');
+
   return saved;
 }
 
@@ -46,12 +49,32 @@ export async function deleteTrackAction(id: number) {
     throw new Error('Team not found');
   }
 
-  const deleted = await db
-    .delete(tracks)
+  const [target] = await db
+    .select({ title: tracks.title, subtitle: tracks.subtitle })
+    .from(tracks)
     .where(and(eq(tracks.id, id), eq(tracks.teamId, team.id)))
-    .returning({ id: tracks.id });
+    .limit(1);
 
-  if (deleted.length === 0) {
+  if (!target) {
     throw new Error(`Track ${id} was not found or already deleted`);
   }
+
+  // Scanning a mix at a fixed interval detects the same track several times, so
+  // one visible row usually stands for several stored detections. Deleting only
+  // the clicked id would just promote the next duplicate into its place, which
+  // is why a deleted track kept reappearing in the library.
+  const deleted = await db
+    .delete(tracks)
+    .where(
+      and(
+        eq(tracks.teamId, team.id),
+        eq(tracks.title, target.title),
+        eq(tracks.subtitle, target.subtitle)
+      )
+    )
+    .returning({ id: tracks.id });
+
+  revalidatePath('/dashboard/library');
+
+  return deleted.map((row) => row.id);
 }
