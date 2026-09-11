@@ -55,12 +55,34 @@ export const activityLogs = pgTable('activity_logs', {
   ipAddress: varchar('ip_address', { length: 45 }),
 });
 
+/**
+ * One analysis run: a single file or URL scanned at a chosen interval. Tracks
+ * point at the run they were detected in so the library can group by it.
+ */
+export const sources = pgTable('sources', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  userId: integer('user_id').references(() => users.id),
+  // 'file' | 'url' | 'unknown' ('unknown' covers rows recorded before runs
+  // were tracked, which are grouped by detection time instead).
+  kind: varchar('kind', { length: 20 }).notNull().default('unknown'),
+  label: varchar('label', { length: 512 }).notNull(),
+  url: text('url'),
+  intervalMinutes: integer('interval_minutes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const tracks = pgTable('tracks', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
     .notNull()
     .references(() => teams.id),
   userId: integer('user_id').references(() => users.id),
+  // Nullable: rows predating source tracking keep working, and the backfill
+  // assigns them a synthesised 'unknown' run.
+  sourceId: integer('source_id').references(() => sources.id),
   title: varchar('title', { length: 255 }).notNull(),
   subtitle: varchar('subtitle', { length: 255 }).notNull(),
   position: real('position').notNull(),
@@ -91,10 +113,22 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   tracks: many(tracks),
 }));
 
+export const sourcesRelations = relations(sources, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [sources.teamId],
+    references: [teams.id],
+  }),
+  tracks: many(tracks),
+}));
+
 export const tracksRelations = relations(tracks, ({ one }) => ({
   team: one(teams, {
     fields: [tracks.teamId],
     references: [teams.id],
+  }),
+  source: one(sources, {
+    fields: [tracks.sourceId],
+    references: [sources.id],
   }),
   user: one(users, {
     fields: [tracks.userId],
@@ -152,6 +186,9 @@ export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
 export type Track = typeof tracks.$inferSelect;
 export type NewTrack = typeof tracks.$inferInsert;
+export type Source = typeof sources.$inferSelect;
+export type NewSource = typeof sources.$inferInsert;
+export type TrackWithSource = Track & { source: Source | null };
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;

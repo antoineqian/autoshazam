@@ -15,6 +15,20 @@
       "when": 1784714065718,
       "tag": "0001_past_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789117330655,
+      "tag": "0002_clammy_shaman",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789117349041,
+      "tag": "0003_backfill_sources_from_detection_time",
+      "breakpoints": true
     }
   ]
 }
