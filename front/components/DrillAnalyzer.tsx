@@ -1,26 +1,13 @@
 'use client';
 
-import React, { useState } from "react";
-import toast from "react-hot-toast";
+import React from "react";
 import ListTracks from "@/components/ListTracks";
 import FileUploadForm from "@/components/FileUploadForm";
-import { saveTrackAction, deleteTrackAction } from "@/lib/tracks/actions";
-import type { Track } from "@/lib/db/schema";
+import { saveTrackAction } from "@/lib/tracks/actions";
+import { useTrackList } from "@/lib/tracks/use-track-list";
 
 export default function DrillAnalyzer() {
-  const [tracks, setTracks] = useState<Track[]>([]);
-
-  const deleteTrack = async (id: number) => {
-    const previousTracks = tracks;
-    setTracks((prevTracks) => prevTracks.filter((track) => track.id !== id));
-    try {
-      await deleteTrackAction(id);
-    } catch (err) {
-      console.error('Failed to delete track', err);
-      setTracks(previousTracks);
-      toast.error('Failed to delete track, please try again');
-    }
-  };
+  const { tracks, setTracks, deleteTrack } = useTrackList();
 
   // Called as each track is detected over the websocket (URL mode).
   const addTrack = async (rawTrack: string): Promise<void> => {
