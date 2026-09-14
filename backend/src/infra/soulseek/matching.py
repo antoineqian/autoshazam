@@ -39,6 +39,9 @@ class Scored:
     candidate: Candidate
     match: float
     clean_name: str  # normalised filename, the identity of a "distinct file"
+    # Meaningful version markers only: "Original Mix" is the track itself, so a
+    # file labelled with it must read as unmarked, exactly as in passes_filters.
+    markers: frozenset[str] = frozenset()
 
 
 DecisionStatus = Literal["matched", "review", "not_found"]
@@ -135,7 +138,12 @@ def score(candidate: Candidate, target: Target) -> Scored:
     penalty = min(EXTRA_WORD_PENALTY * len(extra), MAX_EXTRA_PENALTY)
 
     match = 0.55 * s_title + 0.30 * s_artist + 0.15 * s_marker - penalty
-    return Scored(candidate=candidate, match=round(max(match, 0.0), 1), clean_name=clean)
+    return Scored(
+        candidate=candidate,
+        match=round(max(match, 0.0), 1),
+        clean_name=clean,
+        markers=parse_filename(candidate.filename).marker_words,
+    )
 
 
 def _noise_words() -> set[str]:
@@ -204,10 +212,13 @@ def evaluate(candidates: list[Candidate], target: Target, prefs: Preferences) ->
     if not prefs.auto_download:
         return Decision(status="review", ranked=ranked, groups=groups[:REVIEW_CANDIDATES])
 
+    # Two strong candidates are only a real doubt when they are different takes
+    # of the track. Reading raw filename words here would count "Checkpoint" and
+    # "Checkpoint (Original Mix)" as a disagreement, though the filter above has
+    # already ruled that marker meaningless.
     top = groups[0]
-    top_markers = version_words(top.clean_name)
     ambiguous = any(
-        other.match >= AUTO_THRESHOLD and version_words(other.clean_name) != top_markers
+        other.match >= AUTO_THRESHOLD and other.markers != top.markers
         for other in groups[1:]
     )
     if top.match >= AUTO_THRESHOLD and not ambiguous:
