@@ -168,6 +168,17 @@ class TestEvaluate:
         assert decision.status == "review"
         assert len(decision.groups) == 2
 
+    def test_noise_marker_is_not_a_disagreement(self):
+        """"Original Mix" is the track itself, so it must not force a review."""
+        cands = [
+            cand("@@x\\a\\DJ Koze - Pick Up.flac", username="a"),
+            cand("@@x\\b\\DJ Koze - Pick Up (Original Mix).flac", username="b"),
+            cand("@@x\\c\\DJ Koze - Pick Up (Radio Edit).flac", username="c"),
+        ]
+        decision = evaluate(cands, KOZE, PREFS)
+        assert decision.status == "matched"
+        assert len(decision.groups) == 3
+
     def test_review_keeps_at_most_three_groups(self):
         cands = [
             cand(f"@@x\\{i}\\DJ Koze - Pick Up The Phone {i}.mp3", username=str(i)) for i in range(5)
