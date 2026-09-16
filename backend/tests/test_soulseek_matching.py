@@ -179,6 +179,39 @@ class TestEvaluate:
         assert decision.status == "matched"
         assert len(decision.groups) == 3
 
+    def test_confidence_beats_availability(self):
+        """A perfect match on a slow peer must not lose to a weak name on a fast
+        one: the gate asks whether this is the right file, not the quickest."""
+        cands = [
+            cand("@@x\\a\\Pick Up (Original Mix).flac", username="fast", avg_speed=9_000),
+            cand("@@x\\b\\DJ Koze - Pick Up.flac", username="slow", avg_speed=10),
+        ]
+        decision = evaluate(cands, KOZE, PREFS)
+        assert decision.status == "matched"
+        assert decision.groups[0].candidate.username == "slow"
+
+    def test_format_preference_still_decides_within_a_tier(self):
+        cands = [
+            cand("@@x\\a\\DJ Koze - Pick Up.mp3", username="fast", avg_speed=9_000),
+            cand("@@x\\b\\DJ Koze - Pick Up.flac", username="slow", avg_speed=10),
+        ]
+        decision = evaluate(cands, KOZE, PREFS)
+        assert decision.status == "matched"
+        assert decision.groups[0].candidate.extension == "flac"
+
+    def test_ambiguity_trigger_is_always_on_the_card(self):
+        target = Target.for_track("DJ Koze", "Pick Up (Stimming Remix)")
+        cands = [
+            cand(f"@@x\\{i}\\DJ Koze - Pick Up (Stimming Remix) {i}.flac", username=str(i))
+            for i in range(3)
+        ]
+        # Ranks last, but it is the only reason the user is being asked.
+        cands.append(cand("@@x\\t\\DJ Koze - Pick Up Stimming.flac", username="trigger"))
+        decision = evaluate(cands, target, PREFS)
+        assert decision.status == "review"
+        assert len(decision.groups) == 3
+        assert "trigger" in [g.candidate.username for g in decision.groups]
+
     def test_review_keeps_at_most_three_groups(self):
         cands = [
             cand(f"@@x\\{i}\\DJ Koze - Pick Up The Phone {i}.mp3", username=str(i)) for i in range(5)

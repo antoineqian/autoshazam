@@ -322,7 +322,11 @@ All ratios come from `rapidfuzz.fuzz` and are in `0..100`. Candidates with
 
 ### 6.4 Ranking
 
-Among candidates that survive, sort by:
+Two different questions, and mixing them costs downloads. *Which peer* to pull
+from is about availability; *which file* to take is about whether it is the
+right track at all.
+
+Peer order, `rank_key`, sorts every surviving candidate by:
 
 1. index of `extension` in `formatPriority` (lower first);
 2. bitrate tier, descending: lossless > 320 > VBR with average ≥ 220 > 256 >
@@ -332,19 +336,34 @@ Among candidates that survive, sort by:
 5. `avg_speed` descending;
 6. `match` descending.
 
-Quality outranks match because everything left is already an accepted match.
+File order, `group_key`, sorts the distinct files by:
+
+1. `match >= 85` first;
+2. index of `extension` in `formatPriority`;
+3. bitrate tier, descending;
+4. `match` descending.
+
+Confidence leads because `match >= 80` only means *plausible*: the right track
+in a second-choice format beats a likely-wrong one in the preferred format.
+Availability is deliberately absent — a perfect match behind a slow peer is
+still the file we want, and a queue is a reason to wait, not to take the wrong
+track. Within one confidence tier the user's format and bitrate preferences
+decide, as before.
 
 ### 6.5 Decision
 
 Group surviving candidates by `clean(filename)`; each group is one distinct
-file offered by one or more users.
+file offered by one or more users, represented by its best-ranked peer, and the
+groups are then put in file order.
 
 - No candidates: `not_found`.
 - `autoDownload` off: `review`.
-- Best-ranked candidate has `match >= 85` and no other group with
-  `match >= 85` disagrees on required markers: `matched`.
-- Otherwise: `review` with the top three groups, one candidate each (the
-  best-ranked user in the group).
+- Best group has `match >= 85` and no other group with `match >= 85` disagrees
+  on required markers: `matched`.
+- Otherwise: `review` with three groups, one candidate each. When a
+  disagreement raised the doubt, the group that raised it is always one of the
+  three — a card of equally good files with the reason missing tells the user
+  nothing.
 
 ### 6.6 Destination (`files.py`)
 
