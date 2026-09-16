@@ -170,12 +170,33 @@ def bitrate_tier(candidate: Candidate) -> int:
     return 1
 
 
+def _format_index(scored: Scored, prefs: Preferences) -> int:
+    ext = scored.candidate.extension
+    return (
+        prefs.format_priority.index(ext)
+        if ext in prefs.format_priority
+        else len(prefs.format_priority)
+    )
+
+
+def group_key(scored: Scored, prefs: Preferences):
+    """Which *file* to take. Confidence first: the right track in a second-choice
+    format beats a likely-wrong one in the preferred format. Within a confidence
+    tier the user's format and bitrate preferences decide, and availability does
+    not enter — that is a question about peers, settled by rank_key."""
+    return (
+        0 if scored.match >= AUTO_THRESHOLD else 1,
+        _format_index(scored, prefs),
+        -bitrate_tier(scored.candidate),
+        -scored.match,
+    )
+
+
 def rank_key(scored: Scored, prefs: Preferences):
+    """Which *peer* to take it from, among everyone offering files."""
     c = scored.candidate
     return (
-        prefs.format_priority.index(c.extension)
-        if c.extension in prefs.format_priority
-        else len(prefs.format_priority),
+        _format_index(scored, prefs),
         -bitrate_tier(c),
         0 if c.has_free_slots else 1,
         c.queue_size,
@@ -199,12 +220,15 @@ def evaluate(candidates: list[Candidate], target: Target, prefs: Preferences) ->
     ]
     ranked = rank(survivors, prefs)
 
+    # One entry per distinct file, each represented by its most available peer,
+    # then reordered by how good the file itself looks.
     groups: list[Scored] = []
     seen: set[str] = set()
     for s in ranked:
         if s.clean_name not in seen:
             seen.add(s.clean_name)
             groups.append(s)
+    groups.sort(key=lambda s: group_key(s, prefs))
 
     if not groups:
         return Decision(status="not_found")
@@ -217,11 +241,24 @@ def evaluate(candidates: list[Candidate], target: Target, prefs: Preferences) ->
     # "Checkpoint (Original Mix)" as a disagreement, though the filter above has
     # already ruled that marker meaningless.
     top = groups[0]
-    ambiguous = any(
-        other.match >= AUTO_THRESHOLD and other.markers != top.markers
-        for other in groups[1:]
+    trigger = next(
+        (
+            other
+            for other in groups[1:]
+            if other.match >= AUTO_THRESHOLD and other.markers != top.markers
+        ),
+        None,
     )
-    if top.match >= AUTO_THRESHOLD and not ambiguous:
+    if top.match >= AUTO_THRESHOLD and trigger is None:
         return Decision(status="matched", ranked=ranked, groups=groups[:REVIEW_CANDIDATES])
 
-    return Decision(status="review", ranked=ranked, groups=groups[:REVIEW_CANDIDATES])
+    return Decision(status="review", ranked=ranked, groups=_review_list(groups, trigger))
+
+
+def _review_list(groups: list[Scored], trigger: Scored | None) -> list[Scored]:
+    """The card asks the user to settle a doubt, so whatever raised it has to be
+    on the card — otherwise they see a row of equally good files and no reason."""
+    shown = groups[:REVIEW_CANDIDATES]
+    if trigger is None or trigger in shown:
+        return shown
+    return shown[: REVIEW_CANDIDATES - 1] + [trigger]
