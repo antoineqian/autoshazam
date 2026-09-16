@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
+import { SoulseekJobsProvider } from '@/lib/soulseek/jobs-context';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
@@ -98,9 +99,11 @@ function Header() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <section className="flex flex-col min-h-screen">
-      <Header />
-      {children}
-    </section>
+    <SoulseekJobsProvider>
+      <section className="flex flex-col min-h-screen">
+        <Header />
+        {children}
+      </section>
+    </SoulseekJobsProvider>
   );
 }

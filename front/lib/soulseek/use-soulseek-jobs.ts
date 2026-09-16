@@ -18,6 +18,27 @@ import { isActive } from './types';
 import type { DownloadPreferences } from './preferences';
 import type { Candidate, Item, Job, JobItemInput } from './types';
 
+// Jobs live in the backend, so the only thing worth keeping on the client is
+// how to find them again: which jobs are in flight, which source each track
+// came from, and what we have already reacted to, so a restored job does not
+// record its downloads a second time.
+const STORAGE_KEY = 'soulseek-jobs-v1';
+
+type Persisted = {
+  jobIds: string[];
+  sourceIds: Record<string, number | null>;
+  notified: string[];
+};
+
+function readStored(): Persisted | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Persisted) : null;
+  } catch {
+    return null;
+  }
+}
+
 const POLL_MS = 2_000;
 // Review items only change when the user acts, so polling can relax.
 const REVIEW_POLL_MS = 10_000;
@@ -35,22 +56,58 @@ const errorMessage = (err: unknown) =>
  * Owns every Soulseek job started from the library. One item stands for a
  * track in every group it appears in, keyed like identity() in library-model,
  * so a track downloaded from one mix stops looking missing in another.
+ *
+ * Mounted by the dashboard layout rather than the library page: downloads run
+ * in the backend and outlive the page, and a job nobody is watching finishes
+ * on disk without ever being written to the library.
  */
-export function useSoulseekJobs({
-  onDownloaded,
-}: {
-  onDownloaded: (item: Item) => void;
-}) {
+export function useSoulseekJobs() {
   const { data: status } = useSWR('soulseek-status', getSoulseekStatus, {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
   });
 
   const [jobs, setJobs] = useState<Job[]>([]);
+  // Tracks this session has pulled down, for pages showing them as missing.
+  const [downloaded, setDownloaded] = useState<ReadonlySet<string>>(
+    () => new Set<string>()
+  );
+  const [restored, setRestored] = useState(false);
   const sourceIds = useRef(new Map<string, number | null>());
   const notified = useRef(new Set<string>());
-  const onDownloadedRef = useRef(onDownloaded);
-  onDownloadedRef.current = onDownloaded;
+
+  // Pick up jobs left running by a previous page load before anything else.
+  useEffect(() => {
+    const stored = readStored();
+    if (!stored) {
+      setRestored(true);
+      return;
+    }
+    for (const [key, id] of Object.entries(stored.sourceIds ?? {})) {
+      sourceIds.current.set(key, id);
+    }
+    for (const key of stored.notified ?? []) {
+      notified.current.add(key);
+    }
+
+    let cancelled = false;
+    Promise.all(
+      (stored.jobIds ?? []).map((id) => getJob(id).catch(() => null))
+    ).then((results) => {
+      if (cancelled) return;
+      // A job the backend has purged is simply gone; nothing to report.
+      const found = results.filter((job): job is Job => job !== null);
+      const ids = new Set(found.map((job) => job.id));
+      // Merge rather than replace: a job started while this was in flight
+      // must not be dropped on the floor.
+      setJobs((current) => [...found, ...current.filter((job) => !ids.has(job.id))]);
+      setRestored(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Later jobs win: a track re-requested after a skip or failure should show
   // its new state, not the old one.
@@ -164,7 +221,7 @@ export function useSoulseekJobs({
         if (item.status === 'done') {
           notified.current.add(key);
           toast.success(`Downloaded ${item.subtitle} - ${item.title}`);
-          onDownloadedRef.current(item);
+          setDownloaded((current) => new Set(current).add(identity(item)));
           recordDownloadAction({
             title: item.title,
             subtitle: item.subtitle,
@@ -191,6 +248,34 @@ export function useSoulseekJobs({
       }
     }
   }, [jobs]);
+
+  // Runs after the effect above, so notified is up to date.
+  useEffect(() => {
+    if (!restored) return;
+    const live = jobs.filter((job) =>
+      job.items.some((item) => isActive(item.status))
+    );
+    try {
+      if (live.length === 0) {
+        window.localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      const keys = new Set(live.flatMap((job) => job.items.map(identity)));
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          jobIds: live.map((job) => job.id),
+          sourceIds: Object.fromEntries(
+            [...sourceIds.current].filter(([key]) => keys.has(key))
+          ),
+          notified: [...notified.current],
+        } satisfies Persisted)
+      );
+    } catch {
+      // Private mode or a full quota. Downloads still work; they just stop
+      // surviving a reload.
+    }
+  }, [jobs, restored]);
 
   const startDownload = useCallback(
     async (items: DownloadRequest[], preferences: DownloadPreferences) => {
@@ -244,5 +329,5 @@ export function useSoulseekJobs({
   const retry = (item: ItemWithJob) =>
     act(item, () => retryItem(item.jobId, item.id), 'Could not retry that track');
 
-  return { status, startDownload, itemFor, choose, skip, retry };
+  return { status, startDownload, itemFor, choose, skip, retry, downloaded };
 }

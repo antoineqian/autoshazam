@@ -1,5 +1,7 @@
+import asyncio
 import json
 import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Form, WebSocket
 from fastapi import File, UploadFile
@@ -33,6 +35,18 @@ app.add_middleware(
 app.include_router(soulseek_router)
 
 
+def _fetch_media(url: str) -> str:
+    """Download the media and return where it landed. yt-dlp and the ffmpeg
+    post-processor are wholly synchronous, so this only ever runs in a thread."""
+    ydl_opts = build_ydl_opts("./storage/%(title)s.%(ext)s")
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.add_post_processor(PathWriter(), when="post_process")
+        ydl.download(url)
+
+    with open("storage/path.json", "r") as f:
+        return json.load(f)
+
+
 @app.post("/processFolder")
 async def processFolder(files: list[UploadFile] = File(...), interval: int = Form(...)):
     all_results = []
@@ -43,13 +57,12 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int = For
         print(
             f"Processing file {file.filename} {file.content_type} with interval {interval}"
         )
-        contents = file.file.read()
+        contents = await file.read()
         storage_dir = os.path.normpath(os.path.join(os.getcwd(), "storage"))
         if not os.path.exists(storage_dir):
             os.makedirs(storage_dir)
         file_location = os.path.join(storage_dir, "tmp")
-        with open(file_location, "wb") as f:
-            f.write(contents)
+        await asyncio.to_thread(Path(file_location).write_bytes, contents)
         try:
             results = await shazam_file(file_location, interval)
             for r in results:
@@ -74,16 +87,8 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int = For
 @app.post("/processUrl")
 async def processUrl(url: str = Form(...), interval: int = Form(...)):
     print(f"Processing url {url} with {interval} seconds")
-    file_location = "./storage/%(title)s.%(ext)s"
-    ydl_opts = build_ydl_opts(file_location)
-    with YoutubeDL(ydl_opts) as ydl:
-        ydl.add_post_processor(PathWriter(), when="post_process")
-        ydl.download(url)
-
-    with open("storage/path.json", "r") as f:
-        file_location = json.load(f)
-        results = await shazam_file(file_location, interval)
-    return results
+    file_location = await asyncio.to_thread(_fetch_media, url)
+    return await shazam_file(file_location, interval)
 
 
 @app.websocket("/ws")
@@ -121,14 +126,7 @@ async def ws_processUrl(websocket: WebSocket):
     await websocket.accept()
     url = await websocket.receive_text()
     interval = int(await websocket.receive_text())
-    file_location = "./storage/%(title)s.%(ext)s"
-    ydl_opts = build_ydl_opts(file_location)
-    with YoutubeDL(ydl_opts) as ydl:
-        ydl.add_post_processor(PathWriter(), when="post_process")
-        ydl.download(url)
-
-    with open("storage/path.json", "r") as f:
-        file_location = json.load(f)
+    file_location = await asyncio.to_thread(_fetch_media, url)
 
     # Announce the run before streaming any tracks, so the client can record
     # the source they belong to. yt-dlp names the file after the media title,
