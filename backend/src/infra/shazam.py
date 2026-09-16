@@ -66,14 +66,30 @@ async def shazam_segment(segment, position):
     return track_info
 
 
+async def _segments(filename, interval):
+    """Decode the file and cut it into interval-sized pieces.
+
+    pydub shells out to ffmpeg and slices in memory, both synchronous and both
+    long enough on a full mix to freeze the event loop — which would leave the
+    Soulseek client unable to answer pings or read transfer bytes while an
+    analysis runs. Off the loop it goes.
+    """
+
+    def cut():
+        seg = AudioSegment.from_file(filename)
+        iters = ceil(seg.duration_seconds * 1000 / interval)
+        return [(seg[i * interval:(i + 1) * interval], i * interval) for i in range(iters)]
+
+    return await asyncio.to_thread(cut)
+
+
 async def shazam_file(filename, interval):
     start = time.time()
     interval = interval * 60 * 1000
-    seg = AudioSegment.from_file(filename)
-    dur = seg.duration_seconds
+    segments = await _segments(filename, interval)
+    iters = len(segments)
 
-    iters = ceil(dur * 1000 / interval)
-    coros = [shazam_segment(seg[i*interval:(i+1)*interval], i*interval) for i in range(iters)]
+    coros = [shazam_segment(seg, position) for seg, position in segments]
     results = await asyncio.gather(*coros, return_exceptions=True)
 
     tracks = [r for r in results if r is not None and not isinstance(r, Exception)]
@@ -95,11 +111,10 @@ async def shazam_segment_ws(segment, position, websocket):
 async def shazam_file_ws(filename, interval, websocket):
     start = time.time()
     interval = interval * 60 * 1000
-    seg = AudioSegment.from_file(filename)
-    dur = seg.duration_seconds
+    segments = await _segments(filename, interval)
+    iters = len(segments)
 
-    iters = ceil(dur * 1000 / interval)
-    coros = [shazam_segment_ws(seg[i*interval:(i+1)*interval], i*interval, websocket) for i in range(iters)]
+    coros = [shazam_segment_ws(seg, position, websocket) for seg, position in segments]
     # return_exceptions=True so one failed segment can't abort the whole run.
     results = await asyncio.gather(*coros, return_exceptions=True)
 

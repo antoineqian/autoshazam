@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Search, X } from 'lucide-react';
 import { SourceGroup } from './source-group';
@@ -10,6 +10,7 @@ import {
   countSourcesPerTrack,
   flattenUnique,
   groupBySource,
+  identity,
   matchesQuery,
   formatPosition,
 } from '@/lib/tracks/library-model';
@@ -27,9 +28,8 @@ import {
   setTrackDownloadedAction,
 } from '@/lib/tracks/actions';
 import type { TrackWithSource } from '@/lib/db/schema';
-import { useSoulseekJobs } from '@/lib/soulseek/use-soulseek-jobs';
+import { useSoulseek } from '@/lib/soulseek/jobs-context';
 import { isActive } from '@/lib/soulseek/types';
-import type { Item } from '@/lib/soulseek/types';
 import type { DownloadPreferences } from '@/lib/soulseek/preferences';
 
 const SOURCE_SORTS: { value: SourceSort; label: string }[] = [
@@ -104,19 +104,27 @@ export function LibraryView({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // A finished Soulseek download is already recorded server-side by the hook;
-  // this only mirrors it locally, like toggleDownloaded does for the checkbox.
-  const markDownloaded = useCallback((item: Item) => {
-    setTracks((current) =>
-      current.map((track) =>
-        track.title === item.title && track.subtitle === item.subtitle
-          ? { ...track, downloaded: true }
-          : track
-      )
-    );
-  }, []);
+  const soulseek = useSoulseek();
 
-  const soulseek = useSoulseekJobs({ onDownloaded: markDownloaded });
+  // A finished Soulseek download is already recorded server-side; this only
+  // mirrors it locally, like toggleDownloaded does for the checkbox. The set
+  // comes from the layout, so downloads finished while this page was unmounted
+  // land here too.
+  useEffect(() => {
+    if (soulseek.downloaded.size === 0) return;
+    setTracks((current) => {
+      let changed = false;
+      const next = current.map((track) => {
+        if (track.downloaded || !soulseek.downloaded.has(identity(track))) {
+          return track;
+        }
+        changed = true;
+        return { ...track, downloaded: true };
+      });
+      return changed ? next : current;
+    });
+  }, [soulseek.downloaded]);
+
   const soulseekReady = soulseek.status?.configured === true;
 
   const sourceLabels = useMemo(() => countSourcesPerTrack(tracks), [tracks]);
