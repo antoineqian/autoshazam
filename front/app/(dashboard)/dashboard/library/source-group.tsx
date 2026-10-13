@@ -42,6 +42,8 @@ export function SourceGroup({
   onToggle,
   onDeleteTrack,
   onToggleDownloaded,
+  onToggleFavorited,
+  favoritePending,
   onDeleteSource,
   onRenameSource,
   onExport,
@@ -56,6 +58,8 @@ export function SourceGroup({
   sourceLabelsFor: (track: { title: string; subtitle: string }) => string[];
   onDeleteTrack: (id: number) => void;
   onToggleDownloaded: (id: number, downloaded: boolean) => void;
+  onToggleFavorited: (id: number, favorited: boolean) => void;
+  favoritePending: boolean;
   onDeleteSource: (id: number) => void;
   onRenameSource: (id: number, label: string) => void;
   onExport: (group: SourceGroupModel) => void;
@@ -189,6 +193,8 @@ export function SourceGroup({
                 sourceLabels={sourceLabelsFor(track)}
                 onDelete={onDeleteTrack}
                 onToggleDownloaded={onToggleDownloaded}
+                onToggleFavorited={onToggleFavorited}
+                favoritePending={favoritePending}
                 deleteTitle="Remove from this source"
                 downloadState={item}
                 onDownload={

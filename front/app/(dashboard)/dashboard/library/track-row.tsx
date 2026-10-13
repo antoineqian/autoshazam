@@ -2,7 +2,7 @@
 
 import copy from 'clipboard-copy';
 import toast from 'react-hot-toast';
-import { Download } from 'lucide-react';
+import { Download, Heart } from 'lucide-react';
 import AudioPlayer from '@/components/AudioPlayer';
 import { DownloadStatus } from './download-status';
 import { formatPosition } from '@/lib/tracks/library-model';
@@ -14,6 +14,8 @@ export function TrackRow({
   sourceLabels,
   onDelete,
   onToggleDownloaded,
+  onToggleFavorited,
+  favoritePending,
   deleteTitle,
   downloadState,
   onDownload,
@@ -25,6 +27,8 @@ export function TrackRow({
   sourceLabels?: string[];
   onDelete: (id: number) => void;
   onToggleDownloaded: (id: number, downloaded: boolean) => void;
+  onToggleFavorited: (id: number, favorited: boolean) => void;
+  favoritePending: boolean;
   deleteTitle: string;
   /** Soulseek item for this track, when a job has been started for it. */
   downloadState?: Item;
@@ -47,7 +51,7 @@ export function TrackRow({
   const showDownload = !track.downloaded && onDownload && !showBadge;
 
   return (
-    <li className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 group">
+    <li className="flex items-center gap-2 px-3 py-2 rounded-md sm:gap-3 hover:bg-gray-50 group">
       <input
         type="checkbox"
         // Always a boolean so the input stays controlled: client state can
@@ -63,7 +67,7 @@ export function TrackRow({
         className="h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-orange-500 focus:ring-orange-500"
       />
 
-      <span className="w-16 shrink-0 text-xs tabular-nums text-gray-500">
+      <span className="w-10 shrink-0 text-xs tabular-nums text-gray-500 sm:w-16">
         {formatPosition(track.position)}
       </span>
 
@@ -101,6 +105,24 @@ export function TrackRow({
           onRetry={onRetry}
         />
       )}
+
+      <button
+        type="button"
+        onClick={() => onToggleFavorited(track.id, !track.favorited)}
+        disabled={favoritePending}
+        aria-pressed={Boolean(track.favorited)}
+        aria-label={`Favourite ${track.subtitle} - ${track.title}`}
+        title={track.favorited ? 'Remove from favourites' : 'Add to favourites'}
+        className={`shrink-0 rounded p-1.5 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:cursor-wait ${
+          track.favorited ? 'text-rose-500' : 'text-gray-400 hover:text-rose-500'
+        }`}
+      >
+        <Heart
+          aria-hidden="true"
+          className="h-4 w-4"
+          fill={track.favorited ? 'currentColor' : 'none'}
+        />
+      </button>
 
       <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         {track.uri && <AudioPlayer audioSrc={track.uri} />}

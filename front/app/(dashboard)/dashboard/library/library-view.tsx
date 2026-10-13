@@ -26,6 +26,7 @@ import {
   deleteTrackEverywhereAction,
   renameSourceAction,
   setTrackDownloadedAction,
+  setTrackFavoritedAction,
 } from '@/lib/tracks/actions';
 import type { TrackWithSource } from '@/lib/db/schema';
 import { useSoulseek } from '@/lib/soulseek/jobs-context';
@@ -80,6 +81,8 @@ export function LibraryView({
   const [downloadFilter, setDownloadFilter] = useState<DownloadFilter>('all');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
+  const [favoritePending, setFavoritePending] = useState(false);
+  const favoriteInFlight = useRef(false);
 
   // Server state can change under us (a new analysis, another team member), so
   // re-sync when the server component sends a fresh list down.
@@ -241,6 +244,42 @@ export function LibraryView({
       () => setTrackDownloadedAction(id, downloaded),
       'Could not update that track, please try again'
     );
+  };
+
+  const toggleFavorited = async (id: number, favorited: boolean) => {
+    const target = tracks.find((track) => track.id === id);
+    if (!target || favoriteInFlight.current) return;
+
+    const matches = (track: TrackWithSource) =>
+      track.title.toLowerCase() === target.title.toLowerCase() &&
+      track.subtitle.toLowerCase() === target.subtitle.toLowerCase();
+    const previous = new Map(
+      tracks.filter(matches).map((track) => [track.id, track.favorited])
+    );
+
+    favoriteInFlight.current = true;
+    setFavoritePending(true);
+    setTracks((current) =>
+      current.map((track) => (matches(track) ? { ...track, favorited } : track))
+    );
+
+    try {
+      await setTrackFavoritedAction(id, favorited);
+    } catch (err) {
+      console.error('Failed to update favourite', err);
+      // Only restore this flag, preserving concurrent download/delete updates.
+      setTracks((current) =>
+        current.map((track) =>
+          previous.has(track.id)
+            ? { ...track, favorited: previous.get(track.id)! }
+            : track
+        )
+      );
+      toast.error('Could not update that favourite, please try again');
+    } finally {
+      favoriteInFlight.current = false;
+      setFavoritePending(false);
+    }
   };
 
   const deleteSource = (sourceId: number) => {
@@ -518,6 +557,8 @@ export function LibraryView({
               onToggle={() => toggleGroup(group.key)}
               onDeleteTrack={deleteFromSource}
               onToggleDownloaded={toggleDownloaded}
+              onToggleFavorited={toggleFavorited}
+              favoritePending={favoritePending}
               onDeleteSource={deleteSource}
               onRenameSource={renameSource}
               onExport={exportGroup}
@@ -541,6 +582,8 @@ export function LibraryView({
                 sourceLabels={track.sourceLabels}
                 onDelete={deleteEverywhere}
                 onToggleDownloaded={toggleDownloaded}
+                onToggleFavorited={toggleFavorited}
+                favoritePending={favoritePending}
                 deleteTitle="Remove from every source"
                 downloadState={item}
                 onDownload={

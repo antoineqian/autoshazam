@@ -1,0 +1,1 @@
+ALTER TABLE "tracks" ADD COLUMN "favorited" boolean DEFAULT false NOT NULL;
