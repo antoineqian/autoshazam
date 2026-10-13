@@ -1,6 +1,6 @@
 'use server';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { sources, tracks } from '@/lib/db/schema';
@@ -36,6 +36,24 @@ async function requireTeamAndUser() {
   return { user, team };
 }
 
+// Match the same song across sources, including differences in capitalisation.
+function matchingTrack(teamId: number, track: { title: string; subtitle: string }) {
+  return and(
+    eq(tracks.teamId, teamId),
+    sql`lower(${tracks.title}) = lower(${track.title})`,
+    sql`lower(${tracks.subtitle}) = lower(${track.subtitle})`
+  );
+}
+
+async function isFavorited(teamId: number, track: TrackInput) {
+  const [favorite] = await db
+    .select({ id: tracks.id })
+    .from(tracks)
+    .where(and(matchingTrack(teamId, track), eq(tracks.favorited, true)))
+    .limit(1);
+  return Boolean(favorite);
+}
+
 /** Opens a run. URL analyses call this first, then stream tracks into it. */
 export async function createSourceAction(input: SourceInput) {
   const { user, team } = await requireTeamAndUser();
@@ -59,6 +77,7 @@ export async function createSourceAction(input: SourceInput) {
 
 export async function saveTrackAction(input: TrackInput & { sourceId?: number }) {
   const { user, team } = await requireTeamAndUser();
+  const favorited = await isFavorited(team.id, input);
 
   const [saved] = await db
     .insert(tracks)
@@ -72,6 +91,7 @@ export async function saveTrackAction(input: TrackInput & { sourceId?: number })
       fileIndex: input.fileIndex ?? 0,
       url: input.url,
       uri: input.uri,
+      favorited,
     })
     .returning();
 
@@ -99,6 +119,14 @@ export async function saveAnalysisAction(input: {
     })
     .returning();
 
+  const favorites = await db
+    .select({ title: tracks.title, subtitle: tracks.subtitle })
+    .from(tracks)
+    .where(and(eq(tracks.teamId, team.id), eq(tracks.favorited, true)));
+  const favoriteKey = (track: { title: string; subtitle: string }) =>
+    JSON.stringify([track.title.toLowerCase(), track.subtitle.toLowerCase()]);
+  const favoriteKeys = new Set(favorites.map(favoriteKey));
+
   const saved = input.tracks.length
     ? await db
         .insert(tracks)
@@ -113,6 +141,7 @@ export async function saveAnalysisAction(input: {
             fileIndex: track.fileIndex ?? 0,
             url: track.url,
             uri: track.uri,
+            favorited: favoriteKeys.has(favoriteKey(track)),
           }))
         )
         .returning()
@@ -242,6 +271,27 @@ export async function setTrackDownloadedAction(id: number, downloaded: boolean) 
   revalidatePath('/dashboard/library');
 
   return updated.map((row) => row.id);
+}
+
+/** Saves a favourite across all detections of the song in the current team. */
+export async function setTrackFavoritedAction(id: number, favorited: boolean) {
+  if (!Number.isInteger(id) || typeof favorited !== 'boolean') {
+    throw new Error('Invalid favourite update');
+  }
+
+  const { team } = await requireTeamAndUser();
+  const [target] = await db
+    .select({ title: tracks.title, subtitle: tracks.subtitle })
+    .from(tracks)
+    .where(and(eq(tracks.id, id), eq(tracks.teamId, team.id)))
+    .limit(1);
+
+  if (!target) {
+    throw new Error(`Track ${id} was not found`);
+  }
+
+  await db.update(tracks).set({ favorited }).where(matchingTrack(team.id, target));
+  revalidatePath('/dashboard/library');
 }
 
 /** Removes a whole run and everything detected in it. */

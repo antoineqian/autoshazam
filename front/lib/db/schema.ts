@@ -95,6 +95,7 @@ export const tracks = pgTable('tracks', {
   // row but kept identical across every row of the same track, since owning a
   // file is a fact about the track, not about the mix it turned up in.
   downloaded: boolean('downloaded').notNull().default(false),
+  favorited: boolean('favorited').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

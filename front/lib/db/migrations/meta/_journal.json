@@ -43,6 +43,13 @@
       "when": 1789128440004,
       "tag": "0005_large_ultron",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791901236210,
+      "tag": "0006_track_favorites",
+      "breakpoints": true
     }
   ]
 }
