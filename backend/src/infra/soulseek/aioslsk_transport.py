@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 from aioslsk.client import SoulSeekClient
+from aioslsk.events import SessionDestroyedEvent
 from aioslsk.protocol.primitives import AttributeKey
 from aioslsk.settings import (
     CredentialsSettings,
@@ -61,16 +62,18 @@ class AioslskTransport:
         self._config = config
         self._client: SoulSeekClient | None = None
         self._lock = asyncio.Lock()
+        self._session_cleanup: set[asyncio.Task] = set()
         self.incoming_dir = config.download_dir / INCOMING_DIRNAME
 
     @property
     def connected(self) -> bool:
-        return self._client is not None
+        return self._client is not None and self._client.session is not None
 
     async def connect(self) -> None:
         async with self._lock:
-            if self._client is not None:
+            if self.connected:
                 return
+            await self._drop_client_locked()
 
             self.incoming_dir.mkdir(parents=True, exist_ok=True)
             settings = Settings(
@@ -89,24 +92,33 @@ class AioslskTransport:
             try:
                 await client.start()
                 await client.login()
+                if client.session is None:
+                    raise SearchFailed("Soulseek login ended without an active session")
             except Exception as exc:  # noqa: BLE001 - surfaced as one transport error
                 await self._stop(client)
                 raise SearchFailed(f"could not connect to Soulseek: {exc}") from exc
 
             log.info("Connected to Soulseek as %s", self._config.account)
             self._client = client
+            client.events.register(SessionDestroyedEvent, self._on_session_destroyed)
 
     async def search(self, query: str, collect_seconds: float) -> list[Candidate]:
+        # A session can end between query tiers or while the worker is idle.
+        await self.connect()
         client = self._require_client()
+        session = client.session
         try:
             request = await client.searches.search(query)
         except Exception as exc:  # noqa: BLE001
-            await self._drop_client()
+            await self._drop_client(client)
             raise SearchFailed(f"search failed: {exc}") from exc
 
         # Results trickle in from peers; there is no "done" signal, so we give
         # the network a fixed window and take what arrived.
         await asyncio.sleep(collect_seconds)
+        if self._client is not client or client.session is not session:
+            await self._drop_client(client)
+            raise SearchFailed("Soulseek session ended during search; retry the track")
 
         candidates: list[Candidate] = []
         for result in list(request.results):
@@ -123,8 +135,8 @@ class AioslskTransport:
         return candidates
 
     async def download(self, candidate: Candidate, on_progress: ProgressCallback) -> Path:
-        client = self._require_client()
         try:
+            client = self._require_client()
             transfer = await client.transfers.download(candidate.username, candidate.remote_path)
         except Exception as exc:  # noqa: BLE001
             raise DownloadFailed(f"could not request download: {exc}") from exc
@@ -134,6 +146,8 @@ class AioslskTransport:
         try:
             while True:
                 await asyncio.sleep(POLL_SECONDS)
+                if self._client is not client or client.session is None:
+                    raise DownloadFailed("Soulseek session ended during download; retry the track")
                 state = transfer.state.VALUE
                 done = transfer.bytes_transfered
                 if done != last_bytes:
@@ -164,15 +178,35 @@ class AioslskTransport:
 
     async def close(self) -> None:
         await self._drop_client()
+        await asyncio.gather(*self._session_cleanup)
 
     def _require_client(self) -> SoulSeekClient:
-        if self._client is None:
+        if not self.connected:
             raise SearchFailed("not connected to Soulseek")
         return self._client
 
-    async def _drop_client(self) -> None:
+    def _on_session_destroyed(self, _event: SessionDestroyedEvent) -> None:
+        client = self._client
+        if client is None or client.session is not None:
+            return
+        log.warning("Soulseek session ended; reconnecting on the next search")
+        # The event runs inside the network reader. Stop in a separate task so
+        # shutdown can await that reader without making it await itself.
+        task = asyncio.create_task(self._drop_client(client))
+        self._session_cleanup.add(task)
+        task.add_done_callback(self._session_cleanup.discard)
+
+    async def _drop_client(self, expected: SoulSeekClient | None = None) -> None:
+        async with self._lock:
+            # Cleanup from an old search/session must not stop its replacement.
+            if expected is not None and self._client is not expected:
+                return
+            await self._drop_client_locked()
+
+    async def _drop_client_locked(self) -> None:
         client, self._client = self._client, None
         if client is not None:
+            client.events.unregister(SessionDestroyedEvent, self._on_session_destroyed)
             await self._stop(client)
 
     @staticmethod

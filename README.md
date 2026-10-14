@@ -47,6 +47,14 @@ cd backend && .venv/bin/python -m scripts.soulseek_smoke "DJ Koze - Pick Up" "Ob
 
 Add `--download` to actually fetch what would be downloaded automatically.
 
+If you see repeated `not returning search results : no valid session was set`
+warnings, the Soulseek login session has ended while peers are still sending
+search requests to this client. These messages concern replies to other users'
+searches. The backend closes the stale client and reconnects on the next search;
+retry any tracks whose search or download was interrupted. If disconnects keep
+happening, check your connection and whether another Soulseek client is using
+the same account.
+
 ## Install and run frontend and backend using `docker-compose`
 
 If you have `docker` and `docker-compose` installed, it might be easier (and much lighter!) for you to simply build and run the containers:
