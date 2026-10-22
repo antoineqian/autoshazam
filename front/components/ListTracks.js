@@ -1,6 +1,7 @@
 import React from 'react'
 import copy from 'clipboard-copy';
 import toast, { Toaster } from 'react-hot-toast';
+import { formatPosition } from '@/lib/tracks/library-model';
 
 import AudioPlayer from './AudioPlayer';
 
@@ -56,7 +57,7 @@ const ListTracks = ({ tracks, deleteTrack, reset }) => {
       <li className="collection-item">
         <div className='track-info'>
           <span className="title">{track.subtitle} - {track.title}  </span><br></br>
-          <span className='subtitle'>  {track.position} min</span>
+          <span className='subtitle'>  {formatPosition(track.position)}</span>
         </div>
         <div className="button-container">
           <AudioPlayer audioSrc={track.uri} />
