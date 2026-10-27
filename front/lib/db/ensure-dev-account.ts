@@ -2,11 +2,15 @@ import { eq } from 'drizzle-orm';
 import { client, db } from './drizzle';
 import { users, teams, teamMembers } from './schema';
 import { hashPassword } from '@/lib/auth/session';
+import { databaseConfig } from './config';
 
 const DEV_EMAIL = 'test@test.com';
 const DEV_PASSWORD = 'admin123';
 
 async function main() {
+  if (!databaseConfig().local) {
+    throw new Error('The demo account can only be created in a local database.');
+  }
   const [existingUser] = await db
     .select()
     .from(users)

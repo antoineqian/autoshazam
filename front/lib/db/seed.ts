@@ -2,6 +2,7 @@ import { stripe } from '../payments/stripe';
 import { db } from './drizzle';
 import { users, teams, teamMembers } from './schema';
 import { hashPassword } from '@/lib/auth/session';
+import { databaseConfig } from './config';
 
 async function createStripeProducts() {
   console.log('Creating Stripe products and prices...');
@@ -40,6 +41,9 @@ async function createStripeProducts() {
 }
 
 async function seed() {
+  if (!databaseConfig().local) {
+    throw new Error('The demo seed can only be used with a local database.');
+  }
   const email = 'test@test.com';
   const password = 'admin123';
   const passwordHash = await hashPassword(password);

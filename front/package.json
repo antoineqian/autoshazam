@@ -9,6 +9,9 @@
     "db:ensure-dev-account": "npx tsx lib/db/ensure-dev-account.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:check": "npx tsx lib/db/check.ts",
+    "db:test": "npx tsx --test lib/db/config.test.ts",
+    "db:copy-library": "npx tsx lib/db/copy-library.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

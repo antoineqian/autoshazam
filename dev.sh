@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts Postgres, the FastAPI backend, and the Next.js frontend for local dev.
+# Starts the FastAPI backend and Next.js, plus Postgres when using the local DB.
 # Ctrl-C stops the backend and frontend (Postgres keeps running in the background).
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -30,24 +30,35 @@ if [ ! -f front/.env ]; then
   exit 1
 fi
 
-if ! docker start autoshazam-postgres >/dev/null 2>&1; then
-  echo "Starting new autoshazam-postgres container..."
-  docker run -d --name autoshazam-postgres \
-    -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=autoshazam \
-    -p 5432:5432 postgres:16 >/dev/null
-fi
+database_mode=$(cd front && npx tsx lib/db/dev-mode.ts)
+if [ "$database_mode" = "managed-local" ]; then
+  if ! docker start autoshazam-postgres >/dev/null 2>&1; then
+    echo "Starting new autoshazam-postgres container..."
+    docker run -d --name autoshazam-postgres \
+      -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=autoshazam \
+      -p 127.0.0.1:5432:5432 postgres:16 >/dev/null
+  fi
 
-echo "Waiting for Postgres..."
-until docker exec autoshazam-postgres pg_isready -U postgres >/dev/null 2>&1; do
-  sleep 1
-done
+  echo "Waiting for Postgres..."
+  until docker exec autoshazam-postgres pg_isready -U postgres >/dev/null 2>&1; do
+    sleep 1
+  done
+else
+  echo "Using the configured external database (no local Docker database or demo account)."
+fi
 
 if [ -z "${SOULSEEK_ACCOUNT:-}" ] && ! grep -qs "^SOULSEEK_ACCOUNT=." backend/.env; then
   echo "No Soulseek account in backend/.env: track downloads are disabled (see README)." >&2
 fi
 
-(cd front && npm run db:migrate)
-(cd front && npm run db:ensure-dev-account)
+if [ "$database_mode" = "managed-local" ]; then
+  (cd front && npm run db:migrate)
+  (cd front && npm run db:ensure-dev-account)
+else
+  # Shared schema changes are applied explicitly once, not by both computers
+  # racing to migrate whenever they start up.
+  (cd front && npm run db:check)
+fi
 
 trap 'kill 0' EXIT
 
@@ -56,5 +67,7 @@ trap 'kill 0' EXIT
 
 echo "Backend:  http://localhost:8000/docs"
 echo "Frontend: http://localhost:3000"
-echo "Dev login: test@test.com / admin123 (active plan)"
+if [ "$database_mode" = "managed-local" ]; then
+  echo "Dev login: test@test.com / admin123 (active plan)"
+fi
 wait
