@@ -1,9 +1,10 @@
 import asyncio
-import json
 import os
+import time
+from urllib.parse import urlparse
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Form, WebSocket
+from fastapi import FastAPI, Form, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from yt_dlp import YoutubeDL
@@ -35,23 +36,42 @@ app.add_middleware(
 app.include_router(soulseek_router)
 
 
-def _fetch_media(url: str) -> str:
+def _fetch_media(url: str, progress=None) -> str:
     """Download the media and return where it landed. yt-dlp and the ffmpeg
     post-processor are wholly synchronous, so this only ever runs in a thread."""
     ydl_opts = build_ydl_opts("./storage/%(title)s.%(ext)s")
-    with YoutubeDL(ydl_opts) as ydl:
-        ydl.add_post_processor(PathWriter(), when="post_process")
-        ydl.download(url)
+    last_update = 0.0
 
-    with open("storage/path.json", "r") as f:
-        return json.load(f)
+    def report(data):
+        nonlocal last_update
+        now = time.monotonic()
+        if data['status'] == 'downloading' and now - last_update >= 0.25:
+            last_update = now
+            progress({
+                'type': 'progress', 'stage': 'downloading',
+                'downloadedBytes': data.get('downloaded_bytes', 0),
+                'totalBytes': data.get('total_bytes'),
+            })
+
+    if progress is not None:
+        ydl_opts['progress_hooks'] = [report]
+    paths = []
+    with YoutubeDL(ydl_opts) as ydl:
+        # Keep the path within this request instead of sharing storage/path.json
+        # with another analysis that may finish downloading at the same time.
+        ydl.add_post_processor(PathWriter(on_path=paths.append), when="post_process")
+        ydl.download(url)
+    if not paths:
+        raise ValueError('No audio file was downloaded')
+    return paths[-1]
 
 
 @app.post("/processFolder")
-async def processFolder(files: list[UploadFile] = File(...), interval: int = Form(...)):
+async def processFolder(files: list[UploadFile] = File(...), interval: int = Form(..., ge=1)):
     all_results = []
     for i, file in enumerate(files):
-        if not file.content_type.startswith("audio"):
+        if not ((file.content_type or '').startswith("audio") or
+                Path(file.filename or '').suffix.lower() in {'.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.opus', '.aiff', '.aif', '.wma'}):
             print(f"Skipping non-audio file {file.filename} {file.content_type}")
             continue
         print(
@@ -77,7 +97,7 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int = For
         except Exception as e:
             print("Exception caught")
             print(e)
-            return {"message": "There was an error uploading the file", "e": e}
+            raise HTTPException(status_code=422, detail="Could not analyze the audio file. Check that it is a supported audio format.") from e
         finally:
             file.file.close()
             os.remove(file_location)
@@ -85,7 +105,7 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int = For
 
 
 @app.post("/processUrl")
-async def processUrl(url: str = Form(...), interval: int = Form(...)):
+async def processUrl(url: str = Form(...), interval: int = Form(..., ge=1)):
     print(f"Processing url {url} with {interval} seconds")
     file_location = await asyncio.to_thread(_fetch_media, url)
     return await shazam_file(file_location, interval)
@@ -124,23 +144,51 @@ async def ws_processFolder(websocket: WebSocket):
 @app.websocket("/url")
 async def ws_processUrl(websocket: WebSocket):
     await websocket.accept()
-    url = await websocket.receive_text()
-    interval = int(await websocket.receive_text())
-    file_location = await asyncio.to_thread(_fetch_media, url)
+    # Old clients still receive only source/track messages and DONE.
+    show_progress = websocket.query_params.get('progress') == '1'
+    stage = 'validating'
+    try:
+        url = await websocket.receive_text()
+        interval = int(await websocket.receive_text())
+        parsed = urlparse(url)
+        if interval < 1 or parsed.scheme not in ('http', 'https') or not parsed.hostname:
+            raise ValueError('Invalid analysis input')
+        stage = 'downloading'
+        if show_progress:
+            await websocket.send_json({'type': 'progress', 'stage': stage})
+        loop = asyncio.get_running_loop()
 
-    # Announce the run before streaming any tracks, so the client can record
-    # the source they belong to. yt-dlp names the file after the media title,
-    # which reads far better in the library than the raw URL.
-    await websocket.send_json(
-        {
-            "type": "source",
-            "kind": "url",
-            "label": os.path.splitext(os.path.basename(file_location))[0],
-            "url": url,
-            "intervalMinutes": interval,
+        def report(event):
+            # yt-dlp hooks run in the worker thread; serialize their writes on
+            # the websocket's event loop and apply backpressure to the worker.
+            asyncio.run_coroutine_threadsafe(websocket.send_json(event), loop).result(timeout=30)
+
+        file_location = await asyncio.to_thread(_fetch_media, url, report if show_progress else None)
+        stage = 'recognizing'
+        await websocket.send_json({
+            'type': 'source', 'kind': 'url',
+            'label': Path(file_location).stem, 'url': url,
+            'intervalMinutes': interval,
+        })
+        failed = await shazam_file_ws(file_location, interval, websocket, progress=show_progress)
+        if show_progress:
+            await websocket.send_json({'type': 'complete', 'failedSegments': failed})
+        else:
+            await websocket.send_text('DONE')
+    except WebSocketDisconnect:
+        return
+    except Exception:
+        messages = {
+            'validating': 'Enter a valid http(s) URL and a whole-number interval of at least one minute.',
+            'downloading': 'Could not download this audio. Check that the link is public and supported, then try again.',
+            'recognizing': 'Could not analyze this audio. Any tracks already saved are still in your library.',
         }
-    )
-
-    await shazam_file_ws(file_location, interval, websocket)
-
-    await websocket.send_text("DONE")
+        try:
+            await websocket.send_json({'type': 'error', 'message': messages[stage]})
+        except (WebSocketDisconnect, RuntimeError):
+            return
+    finally:
+        try:
+            await websocket.close()
+        except (WebSocketDisconnect, RuntimeError):
+            pass
