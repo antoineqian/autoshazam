@@ -2,7 +2,9 @@ fastapi
 uvicorn
 python-multipart
 websockets
-shazamio
+# 0.9 removed recognize_song, which the recognition pipeline still uses.
+shazamio==0.8.1
+pydub
 socketio
 yt-dlp[default]
 aioslsk
