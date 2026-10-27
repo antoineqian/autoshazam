@@ -9,6 +9,21 @@ First, install the required node packages. We need to use `-f` since there are s
 
 `npm run dev`
 
+The frontend also needs PostgreSQL for sign-in. For the full local development
+stack, start Docker/OrbStack and run `./dev.sh` from the repository root after
+installing the frontend and backend dependencies and configuring `front/.env`.
+That script starts PostgreSQL, applies migrations, and prepares the development
+account (`test@test.com` / `admin123`).
+
+If OrbStack is open but Docker reports a missing socket, check `orb status`.
+Run `orb start` if it reports `Stopped`, then retry `./dev.sh`.
+
+If submitting the sign-in form reports that sign-in is temporarily unavailable,
+check the frontend server log. `ECONNREFUSED` (sometimes inside an empty
+`AggregateError`) means the database at `POSTGRES_URL` could not be reached.
+Make sure the configured database is running; starting `npm run dev` alone does
+not start PostgreSQL.
+
 ## Install and run the backend
 
 Using `python3.11`, install the requirements (note that this includes `yt-dlp` to be able to use `autoshazam` with URLs, which will require `ffmpeg` to be installed in order to function properly):
