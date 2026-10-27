@@ -4,6 +4,11 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker engine is unavailable. With OrbStack, run 'orb start' (the app window can be open while the engine is stopped), then retry ./dev.sh." >&2
+  exit 1
+fi
+
 if [ ! -d backend/.venv ]; then
   echo "backend/.venv not found. Run: cd backend && python3.11 -m venv .venv && ./.venv/bin/pip install -r requirements.txt" >&2
   exit 1
@@ -30,7 +35,9 @@ if [ ! -f front/.env ]; then
   exit 1
 fi
 
-if ! docker start autoshazam-postgres >/dev/null 2>&1; then
+if docker container inspect autoshazam-postgres >/dev/null 2>&1; then
+  docker start autoshazam-postgres >/dev/null
+else
   echo "Starting new autoshazam-postgres container..."
   docker run -d --name autoshazam-postgres \
     -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=autoshazam \

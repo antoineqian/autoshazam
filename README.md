@@ -15,6 +15,9 @@ installing the frontend and backend dependencies and configuring `front/.env`.
 That script starts PostgreSQL, applies migrations, and prepares the development
 account (`test@test.com` / `admin123`).
 
+If OrbStack is open but Docker reports a missing socket, check `orb status`.
+Run `orb start` if it reports `Stopped`, then retry `./dev.sh`.
+
 If submitting the sign-in form reports that sign-in is temporarily unavailable,
 check the frontend server log. `ECONNREFUSED` (sometimes inside an empty
 `AggregateError`) means the database at `POSTGRES_URL` could not be reached.
