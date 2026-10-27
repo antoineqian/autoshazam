@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
+import { isDatabaseConnectionError } from '@/lib/db/availability';
 import {
   User,
   users,
@@ -22,6 +23,7 @@ import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import {
+  type ActionState,
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
@@ -49,7 +51,7 @@ const signInSchema = z.object({
   password: z.string().min(8).max(100)
 });
 
-export const signIn = validatedAction(signInSchema, async (data, formData) => {
+const signInAction = validatedAction(signInSchema, async (data) => {
   const { email, password } = data;
 
   const userWithTeam = await db
@@ -86,19 +88,38 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
-  await Promise.all([
-    setSession(foundUser),
-    logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
-  ]);
+  // Finish database work before issuing a session, so a failed attempt can be
+  // retried without leaving the browser signed in.
+  await logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN);
+  await setSession(foundUser);
+
+  return { team: foundTeam };
+});
+
+export async function signIn(prevState: ActionState, formData: FormData) {
+  let result;
+  try {
+    result = await signInAction(prevState, formData);
+  } catch (error) {
+    if (!isDatabaseConnectionError(error)) throw error;
+
+    console.error('Sign-in failed: database connection unavailable.', error);
+    return {
+      error: 'Sign-in is temporarily unavailable. Please try again shortly.',
+      email: String(formData.get('email') || '')
+    };
+  }
+
+  if ('error' in result) return result;
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ team: foundTeam, priceId });
+    return createCheckoutSession({ team: result.team, priceId });
   }
 
   redirect('/dashboard');
-});
+}
 
 const signUpSchema = z.object({
   email: z.string().email(),
