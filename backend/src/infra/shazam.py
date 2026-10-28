@@ -36,7 +36,7 @@ async def _recognize(segment, position):
                         f"Giving up on position {position} after "
                         f"{MAX_RETRIES + 1} attempts: {e}"
                     )
-    return None
+    raise RuntimeError('Recognition failed after all retries')
 
 
 def _parse_track(ret, position):
@@ -92,6 +92,8 @@ async def shazam_file(filename, interval):
     coros = [shazam_segment(seg, position) for seg, position in segments]
     results = await asyncio.gather(*coros, return_exceptions=True)
 
+    if results and all(isinstance(result, Exception) for result in results):
+        raise RuntimeError('No audio samples could be checked')
     tracks = [r for r in results if r is not None and not isinstance(r, Exception)]
     end = time.time()
     print(f"Took {int(end-start)} seconds, {len(tracks)}/{iters} segments matched")
@@ -108,19 +110,42 @@ async def shazam_segment_ws(segment, position, websocket):
         print(f"Didn't recognize at {position}")
 
 
-async def shazam_file_ws(filename, interval, websocket):
+async def shazam_file_ws(filename, interval, websocket, progress=False):
     start = time.time()
     interval = interval * 60 * 1000
+    if progress:
+        await websocket.send_json({'type': 'progress', 'stage': 'preparing'})
     segments = await _segments(filename, interval)
     iters = len(segments)
+    completed = 0
+    failed = 0
 
-    coros = [shazam_segment_ws(seg, position, websocket) for seg, position in segments]
-    # return_exceptions=True so one failed segment can't abort the whole run.
-    results = await asyncio.gather(*coros, return_exceptions=True)
+    async def report():
+        if progress:
+            await websocket.send_json({
+                'type': 'progress', 'stage': 'recognizing',
+                'completed': completed, 'total': iters, 'failedSegments': failed,
+            })
 
-    failures = [r for r in results if isinstance(r, Exception)]
-    if failures:
-        print(f"{len(failures)}/{iters} segments raised an error")
+    await report()
+    tasks = [asyncio.create_task(shazam_segment(seg, position)) for seg, position in segments]
+    try:
+        for task in asyncio.as_completed(tasks):
+            try:
+                track = await task
+            except Exception:
+                failed += 1
+            else:
+                if track is not None:
+                    await websocket.send_json(track)
+            completed += 1
+            await report()
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     end = time.time()
     print(f"Took {int(end-start)} seconds")
+    return failed
