@@ -1,6 +1,8 @@
 """Where a finished download ends up.
 
     <download_dir>/<sanitised source label>/<sanitised "Artist - Title">.<ext>
+
+Favourited tracks get a "[fav] " prefix before the artist.
 """
 import os
 import re
@@ -27,19 +29,21 @@ def source_folder(label: str) -> str:
     return cleaned if cleaned.strip("_ ") else FALLBACK_FOLDER
 
 
-def track_filename(artist: str, title: str, extension: str) -> str:
+def track_filename(artist: str, title: str, extension: str, *, favorited: bool = False) -> str:
+    prefix = "[fav] " if favorited else ""
     suffix = f".{extension}" if extension else ""
-    budget = MAX_FILENAME_CHARS - len(suffix)
+    budget = MAX_FILENAME_CHARS - len(prefix) - len(suffix)
     stem = sanitise(f"{artist} - {title}", budget) or FALLBACK_STEM
-    return f"{stem}{suffix}"
+    return f"{prefix}{stem}{suffix}"
 
 
 def destination(
-    download_dir: Path, source_label: str, artist: str, title: str, extension: str
+    download_dir: Path, source_label: str, artist: str, title: str, extension: str,
+    *, favorited: bool = False,
 ) -> Path:
     """The final path for a track, with " (2)", " (3)"... when taken."""
     folder = download_dir / source_folder(source_label)
-    filename = track_filename(artist, title, extension)
+    filename = track_filename(artist, title, extension, favorited=favorited)
     candidate = folder / filename
     if not candidate.exists():
         return candidate

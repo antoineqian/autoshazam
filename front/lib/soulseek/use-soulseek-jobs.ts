@@ -287,10 +287,11 @@ export function useSoulseekJobs() {
 
       try {
         const job = await createJob(
-          items.map(({ title, subtitle, sourceLabel }) => ({
+          items.map(({ title, subtitle, sourceLabel, favorited }) => ({
             title,
             subtitle,
             sourceLabel,
+            favorited,
           })),
           preferences
         );

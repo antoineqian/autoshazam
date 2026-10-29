@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.src.infra.soulseek.jobs import DownloadManager, JobError
+from backend.src.infra.soulseek.jobs import DownloadManager, JobError, TrackRequest
 from backend.src.infra.soulseek.matching import Preferences
 from backend.src.infra.soulseek.transport import Candidate, DownloadFailed, DownloadStalled, SearchFailed
 
@@ -91,20 +91,22 @@ def make_manager(tmp_path):
     return _make
 
 
-KOZE = ("Pick Up", "DJ Koze", "Late Night Mix")
+KOZE = TrackRequest("Pick Up", "DJ Koze", "Late Night Mix")
 GOOD = "@@a\\Knock Knock\\DJ Koze - Pick Up.flac"
 
 
 @pytest.mark.asyncio
-async def test_happy_path_downloads_into_source_folder(make_manager, tmp_path):
+@pytest.mark.parametrize("favorited", [False, True])
+async def test_happy_path_downloads_into_source_folder(make_manager, tmp_path, favorited):
     manager, transport = make_manager(results={"dj koze pick up": [cand(GOOD, "a")]})
-    job = manager.create_job(Preferences(), [KOZE])
+    job = manager.create_job(Preferences(), [KOZE._replace(favorited=favorited)])
     await manager.wait_idle()
 
     item = job.items[0]
     assert item.status == "done"
     assert item.progress == 1.0
-    assert item.local_path == str(tmp_path / "Late Night Mix" / "DJ Koze - Pick Up.flac")
+    prefix = "[fav] " if favorited else ""
+    assert item.local_path == str(tmp_path / "Late Night Mix" / f"{prefix}DJ Koze - Pick Up.flac")
     assert Path(item.local_path).read_bytes() == b"audio"
     assert transport.searches == ["dj koze pick up"]
     assert job.finished_at is not None
@@ -113,7 +115,7 @@ async def test_happy_path_downloads_into_source_folder(make_manager, tmp_path):
 @pytest.mark.asyncio
 async def test_not_found_falls_through_tiers(make_manager):
     manager, transport = make_manager(results={})
-    job = manager.create_job(Preferences(), [("Glue (Ben Klock Remix)", "Bicep, Hammer", "Mix")])
+    job = manager.create_job(Preferences(), [TrackRequest("Glue (Ben Klock Remix)", "Bicep, Hammer", "Mix")])
     await manager.wait_idle()
 
     assert transport.searches == ["bicep hammer glue ben klock remix", "bicep glue"]
@@ -200,7 +202,7 @@ async def test_search_failure_marks_item_failed_and_keeps_going(make_manager):
             "objekt ruff dug": [cand("@@a\\x\\Objekt - Ruff Dug.flac", "a")],
         }
     )
-    job = manager.create_job(Preferences(), [KOZE, ("Ruff Dug", "Objekt", "Mix")])
+    job = manager.create_job(Preferences(), [KOZE, TrackRequest("Ruff Dug", "Objekt", "Mix")])
     await manager.wait_idle()
 
     assert job.items[0].status == "failed"

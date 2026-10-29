@@ -8,7 +8,7 @@ from aioslsk.events import EventBus, SessionDestroyedEvent
 from backend.src.infra.soulseek import aioslsk_transport
 from backend.src.infra.soulseek.aioslsk_transport import AioslskTransport
 from backend.src.infra.soulseek.config import SoulseekConfig
-from backend.src.infra.soulseek.jobs import DownloadManager
+from backend.src.infra.soulseek.jobs import DownloadManager, TrackRequest
 from backend.src.infra.soulseek.matching import Preferences
 from backend.src.infra.soulseek.transport import DownloadFailed, SearchFailed
 
@@ -134,7 +134,7 @@ async def test_lost_session_marks_search_failed_instead_of_not_found(transport, 
         search_window=0, search_gap=0,
     )
     try:
-        job = manager.create_job(Preferences(), [("Title", "Artist", "Mix")])
+        job = manager.create_job(Preferences(), [TrackRequest("Title", "Artist", "Mix")])
         await manager.wait_idle()
         assert job.items[0].status == "failed"
         assert "session ended during search" in job.items[0].error

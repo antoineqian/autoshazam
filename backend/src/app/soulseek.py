@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from ..infra.soulseek.config import load_config
-from ..infra.soulseek.jobs import DownloadManager, Item, Job, JobError
+from ..infra.soulseek.jobs import DownloadManager, Item, Job, JobError, TrackRequest
 from ..infra.soulseek.matching import ALLOWED_FORMATS, Preferences, Scored
 
 router = APIRouter(prefix="/soulseek", tags=["soulseek"])
@@ -68,6 +68,7 @@ class ItemIn(BaseModel):
     title: str = Field(min_length=1)
     subtitle: str = Field(min_length=1)
     sourceLabel: str = "Unknown source"
+    favorited: bool = False
 
 
 class CreateJobIn(BaseModel):
@@ -144,7 +145,7 @@ async def create_job(body: CreateJobIn) -> dict:
     manager = get_manager()
     job = manager.create_job(
         body.preferences.to_preferences(),
-        [(i.title, i.subtitle, i.sourceLabel) for i in body.items],
+        [TrackRequest(i.title, i.subtitle, i.sourceLabel, i.favorited) for i in body.items],
     )
     return serialize_job(job)
 

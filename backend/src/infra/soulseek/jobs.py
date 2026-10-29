@@ -11,7 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Awaitable, Callable, Literal
+from typing import Awaitable, Callable, Literal, NamedTuple
 
 from . import files
 from .matching import Decision, Preferences, Scored, Target, evaluate
@@ -34,12 +34,20 @@ TERMINAL_STATUSES: frozenset[str] = frozenset({"done", "not_found", "failed", "s
 RETRYABLE_STATUSES: frozenset[str] = frozenset({"not_found", "failed", "skipped"})
 
 
+class TrackRequest(NamedTuple):
+    title: str
+    subtitle: str
+    source_label: str
+    favorited: bool = False
+
+
 @dataclass
 class Item:
     id: str
     title: str
     subtitle: str  # artist, same as tracks.subtitle
     source_label: str
+    favorited: bool = False
     status: ItemStatus = "queued"
     query_used: str | None = None
     candidates: list[Scored] = field(default_factory=list)  # top groups, for review
@@ -111,16 +119,18 @@ class DownloadManager:
 
     # ------------------------------------------------------------- public --
 
-    def create_job(self, preferences: Preferences, items: list[tuple[str, str, str]]) -> Job:
-        """``items`` are ``(title, subtitle, source_label)`` triples."""
+    def create_job(self, preferences: Preferences, items: list[TrackRequest]) -> Job:
         self._purge()
         job = Job(
             id=uuid.uuid4().hex[:12],
             created_at=datetime.now(timezone.utc),
             preferences=preferences,
             items=[
-                Item(id=uuid.uuid4().hex[:8], title=t, subtitle=s, source_label=label)
-                for t, s, label in items
+                Item(
+                    id=uuid.uuid4().hex[:8], title=track.title, subtitle=track.subtitle,
+                    source_label=track.source_label, favorited=track.favorited,
+                )
+                for track in items
             ],
         )
         self.jobs[job.id] = job
@@ -281,6 +291,7 @@ class DownloadManager:
                     item.subtitle,
                     item.title,
                     scored.candidate.extension,
+                    favorited=item.favorited,
                 )
                 try:
                     files.finalise(downloaded, target, self._incoming_dir)

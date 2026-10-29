@@ -38,13 +38,19 @@ def test_status_unconfigured(monkeypatch):
         assert response.json()["detail"] == "Soulseek is not configured"
 
 
-def test_create_and_poll_job(client):
+@pytest.mark.parametrize("favorited", [None, False, True])
+def test_create_and_poll_job(client, favorited):
     c, manager, transport = client
     response = c.post(
         "/soulseek/jobs",
         json={
             "preferences": {"formatPriority": ["FLAC", "mp3"], "minMp3Bitrate": None, "autoDownload": False},
-            "items": [{"title": "Pick Up", "subtitle": "DJ Koze", "sourceLabel": "Late Night Mix"}],
+            "items": [{
+                "title": "Pick Up",
+                "subtitle": "DJ Koze",
+                "sourceLabel": "Late Night Mix",
+                **({"favorited": favorited} if favorited is not None else {}),
+            }],
         },
     )
     assert response.status_code == 201, response.text
@@ -80,7 +86,10 @@ def test_create_and_poll_job(client):
         if polled["items"][0]["status"] == "done":
             break
     assert polled["items"][0]["status"] == "done"
-    assert polled["items"][0]["localPath"].endswith("Late Night Mix/DJ Koze - Pick Up.flac")
+    prefix = "[fav] " if favorited else ""
+    path = Path(polled["items"][0]["localPath"])
+    assert path.as_posix().endswith(f"Late Night Mix/{prefix}DJ Koze - Pick Up.flac")
+    assert path.read_bytes() == b"audio"
     assert polled["items"][0]["candidates"] == []  # only sent while reviewing
 
 

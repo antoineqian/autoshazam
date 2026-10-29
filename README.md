@@ -94,7 +94,7 @@ new changes made in Supabase will not be present in the old local database.
 
 ## Downloading tracks from Soulseek (optional)
 
-The library can fetch the audio file of a detected track from the Soulseek network: a download icon on each track, and a "Download missing" button on each source. The backend searches, keeps only the formats you allow (Settings › General › Soulseek downloads), scores every result against the artist and title, and downloads the best one on its own, or asks you to choose between at most three when it is not sure.
+The library can fetch the audio file of a detected track from the Soulseek network: a download icon on each track, and a "Download missing" button on each source. Beside it, "Download all favourited" fetches only that source’s favourited tracks that are missing and have no download in progress. The backend searches, keeps only the formats you allow (Settings › General › Soulseek downloads), scores every result against the artist and title, and downloads the best one on its own, or asks you to choose between at most three when it is not sure.
 
 It needs a Soulseek account. Copy `backend/.env.example` to `backend/.env` and fill it in:
 
@@ -106,7 +106,7 @@ The backend reads that file on its own, so `./dev.sh` starts it with no secrets 
 
 Peers connect back to the listening port, so forward it on your router (TCP) or most downloads will sit in the queue forever. Without an account the buttons simply do not appear in the library.
 
-Files are saved as `<download dir>/<source name>/<Artist - Title>.<ext>`, one folder per analysed mix. To check the pipeline against the live network without the UI:
+Files are saved as `<download dir>/<source name>/<Artist - Title>.<ext>`, one folder per analysed mix. Tracks favourited when a download is started are saved with a `[fav] ` prefix, for example `[fav] Artist - Title.flac`, for both individual and bulk downloads. Existing files are not renamed when a favourite changes. To check the pipeline against the live network without the UI:
 
 ```
 cd backend && .venv/bin/python -m scripts.soulseek_smoke "DJ Koze - Pick Up" "Objekt - Ruff Dug"
