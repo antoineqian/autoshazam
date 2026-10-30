@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.src.infra.soulseek.aioslsk_transport import AioslskTransport  # noqa: E402
 from backend.src.infra.soulseek.config import load_config  # noqa: E402
-from backend.src.infra.soulseek.jobs import SEARCH_WINDOW_SECONDS, DownloadManager  # noqa: E402
+from backend.src.infra.soulseek.jobs import SEARCH_WINDOW_SECONDS, DownloadManager, TrackRequest  # noqa: E402
 from backend.src.infra.soulseek.matching import Preferences  # noqa: E402
 
 
@@ -52,7 +52,7 @@ async def main() -> int:
     transport = AioslskTransport(config)
     manager = DownloadManager(transport, config.download_dir, incoming_dir=transport.incoming_dir, search_window=args.window)
 
-    items = [(title, artist, "Soulseek smoke test") for artist, title in map(parse_track, args.tracks)]
+    items = [TrackRequest(title, artist, "Soulseek smoke test") for artist, title in map(parse_track, args.tracks)]
     job = manager.create_job(prefs, items)
 
     try:

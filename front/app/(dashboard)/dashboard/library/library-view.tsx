@@ -347,6 +347,7 @@ export function LibraryView({
                 subtitle: track.subtitle,
                 sourceLabel,
                 sourceId: track.sourceId,
+                favorited: track.favorited,
               },
             ],
             initialPreferences
@@ -358,20 +359,22 @@ export function LibraryView({
     : undefined;
 
   /** Tracks of a group that still need a file and have no job in flight. */
-  const missingIn = (group: SourceGroupModel) =>
+  const missingIn = (group: SourceGroupModel, favoritesOnly = false) =>
     group.tracks.filter((track) => {
+      if (favoritesOnly && !track.favorited) return false;
       if (track.downloaded) return false;
       const item = soulseek.itemFor(track);
       return !item || !isActive(item.status);
     });
 
-  const downloadMissing = (group: SourceGroupModel) =>
+  const downloadMissing = (group: SourceGroupModel, favoritesOnly = false) =>
     soulseek.startDownload(
-      missingIn(group).map((track) => ({
+      missingIn(group, favoritesOnly).map((track) => ({
         title: track.title,
         subtitle: track.subtitle,
         sourceLabel: group.label,
         sourceId: track.sourceId,
+        favorited: track.favorited,
       })),
       initialPreferences
     );
@@ -567,6 +570,12 @@ export function LibraryView({
               missingCount={soulseekReady ? missingIn(group).length : 0}
               onDownloadMissing={
                 soulseekReady ? () => downloadMissing(group) : undefined
+              }
+              favoriteMissingCount={
+                soulseekReady ? missingIn(group, true).length : 0
+              }
+              onDownloadFavorited={
+                soulseekReady ? () => downloadMissing(group, true) : undefined
               }
             />
           ))}

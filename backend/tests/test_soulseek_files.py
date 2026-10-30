@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from backend.src.infra.soulseek import files
 
 
@@ -18,24 +20,28 @@ def test_source_folder_fallback():
     assert files.source_folder("Blawan - Essential Mix") == "Blawan - Essential Mix"
 
 
-def test_track_filename_budget_includes_extension():
-    name = files.track_filename("A" * 200, "B" * 200, "flac")
+@pytest.mark.parametrize("favorited", [False, True])
+def test_track_filename_budget_includes_extension(favorited):
+    name = files.track_filename("A" * 200, "B" * 200, "flac", favorited=favorited)
+    assert name.startswith("[fav] ") is favorited
     assert name.endswith(".flac")
     assert len(name) <= files.MAX_FILENAME_CHARS
 
 
-def test_destination_and_collisions(tmp_path: Path):
-    first = files.destination(tmp_path, "My Mix", "DJ Koze", "Pick Up", "flac")
-    assert first == tmp_path / "My Mix" / "DJ Koze - Pick Up.flac"
+@pytest.mark.parametrize("favorited", [False, True])
+def test_destination_and_collisions(tmp_path: Path, favorited):
+    prefix = "[fav] " if favorited else ""
+    first = files.destination(tmp_path, "My Mix", "DJ Koze", "Pick Up", "flac", favorited=favorited)
+    assert first == tmp_path / "My Mix" / f"{prefix}DJ Koze - Pick Up.flac"
 
     first.parent.mkdir()
     first.write_bytes(b"x")
-    second = files.destination(tmp_path, "My Mix", "DJ Koze", "Pick Up", "flac")
-    assert second.name == "DJ Koze - Pick Up (2).flac"
+    second = files.destination(tmp_path, "My Mix", "DJ Koze", "Pick Up", "flac", favorited=favorited)
+    assert second.name == f"{prefix}DJ Koze - Pick Up (2).flac"
 
     second.write_bytes(b"x")
-    third = files.destination(tmp_path, "My Mix", "DJ Koze", "Pick Up", "flac")
-    assert third.name == "DJ Koze - Pick Up (3).flac"
+    third = files.destination(tmp_path, "My Mix", "DJ Koze", "Pick Up", "flac", favorited=favorited)
+    assert third.name == f"{prefix}DJ Koze - Pick Up (3).flac"
 
 
 def test_finalise_moves_and_cleans_incoming_skeleton(tmp_path: Path):

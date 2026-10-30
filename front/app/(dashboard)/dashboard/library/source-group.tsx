@@ -8,6 +8,7 @@ import {
   FileAudio,
   Link2,
   HelpCircle,
+  Heart,
   Pencil,
   Trash2,
 } from 'lucide-react';
@@ -51,6 +52,8 @@ export function SourceGroup({
   downloads,
   missingCount = 0,
   onDownloadMissing,
+  favoriteMissingCount = 0,
+  onDownloadFavorited,
 }: {
   group: SourceGroupModel;
   expanded: boolean;
@@ -66,6 +69,8 @@ export function SourceGroup({
   downloads?: RowDownloads;
   missingCount?: number;
   onDownloadMissing?: () => void;
+  favoriteMissingCount?: number;
+  onDownloadFavorited?: () => void;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(group.label);
@@ -83,7 +88,7 @@ export function SourceGroup({
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white">
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
         <button
           type="button"
           onClick={onToggle}
@@ -130,7 +135,7 @@ export function SourceGroup({
           {group.intervalMinutes ? ` · every ${group.intervalMinutes} min` : ''}
         </span>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {onDownloadMissing && missingCount > 0 && (
             <button
               type="button"
@@ -140,6 +145,19 @@ export function SourceGroup({
             >
               <CloudDownload className="h-4 w-4" />
               Download missing ({missingCount})
+            </button>
+          )}
+
+          {onDownloadFavorited && missingCount > 0 && (
+            <button
+              type="button"
+              onClick={onDownloadFavorited}
+              disabled={favoritePending || favoriteMissingCount === 0}
+              title="Download every missing favourited track of this source from Soulseek"
+              className="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Heart aria-hidden="true" className="h-4 w-4" />
+              Download all favourited ({favoriteMissingCount})
             </button>
           )}
 

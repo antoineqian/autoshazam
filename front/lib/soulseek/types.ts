@@ -61,6 +61,7 @@ export type JobItemInput = {
   title: string;
   subtitle: string;
   sourceLabel: string;
+  favorited?: boolean;
 };
 
 const TERMINAL: ReadonlySet<ItemStatus> = new Set([
