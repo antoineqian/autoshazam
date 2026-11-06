@@ -58,8 +58,8 @@ export const activityLogs = pgTable('activity_logs', {
 }).enableRLS();
 
 /**
- * One analysis run: a single file or URL scanned at a chosen interval. Tracks
- * point at the run they were detected in so the library can group by it.
+ * One set: an analysed file/URL or a manually pasted tracklist. Tracks point
+ * at their source so the library can group by it.
  */
 export const sources = pgTable('sources', {
   id: serial('id').primaryKey(),
@@ -67,7 +67,7 @@ export const sources = pgTable('sources', {
     .notNull()
     .references(() => teams.id),
   userId: integer('user_id').references(() => users.id),
-  // 'file' | 'url' | 'unknown' ('unknown' covers rows recorded before runs
+  // 'file' | 'url' | 'manual' | 'unknown' ('unknown' covers rows recorded before runs
   // were tracked, which are grouped by detection time instead).
   kind: varchar('kind', { length: 20 }).notNull().default('unknown'),
   label: varchar('label', { length: 512 }).notNull(),
@@ -87,7 +87,10 @@ export const tracks = pgTable('tracks', {
   sourceId: integer('source_id').references(() => sources.id),
   title: varchar('title', { length: 255 }).notNull(),
   subtitle: varchar('subtitle', { length: 255 }).notNull(),
-  position: real('position').notNull(),
+  // Minutes into the set, or null when a pasted track has no timestamp.
+  position: real('position'),
+  // Pasted order is independent of optional timestamps, including repeated tracks.
+  tracklistOrder: integer('tracklist_order'),
   fileIndex: integer('file_index').notNull().default(0),
   url: text('url'),
   uri: text('uri'),

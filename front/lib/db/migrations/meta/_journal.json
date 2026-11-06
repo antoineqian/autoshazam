@@ -57,6 +57,13 @@
       "when": 1793028243431,
       "tag": "0007_private_database",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793980014211,
+      "tag": "0008_manual_tracklists",
+      "breakpoints": true
     }
   ]
 }

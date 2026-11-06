@@ -6,13 +6,15 @@ import { Search, X } from 'lucide-react';
 import { SourceGroup } from './source-group';
 import type { RowDownloads } from './source-group';
 import { TrackRow } from './track-row';
+import { AddSetForm } from './add-set-form';
 import {
   countSourcesPerTrack,
   flattenUnique,
   groupBySource,
   identity,
   matchesQuery,
-  formatPosition,
+  formatTrackName,
+  formatTracklistLine,
 } from '@/lib/tracks/library-model';
 import type {
   SourceGroup as SourceGroupModel,
@@ -165,9 +167,7 @@ export function LibraryView({
   const totalTracks = useMemo(
     () =>
       new Set(
-        tracks.map((track) =>
-          `${track.title} ${track.subtitle}`.toLowerCase()
-        )
+        tracks.map((track) => `${track.title} ${track.subtitle}`.toLowerCase())
       ).size,
     [tracks]
   );
@@ -204,11 +204,12 @@ export function LibraryView({
 
     return withRollback(
       (current) =>
-        current.filter(
-          (track) =>
-            track.sourceId !== target.sourceId ||
-            track.title !== target.title ||
-            track.subtitle !== target.subtitle
+        current.filter((track) =>
+          target.source?.kind === 'manual'
+            ? track.id !== id
+            : track.sourceId !== target.sourceId ||
+              track.title !== target.title ||
+              track.subtitle !== target.subtitle
         ),
       () => deleteTrackAction(id),
       'Could not remove that track, please try again'
@@ -311,18 +312,12 @@ export function LibraryView({
   const exportGroup = (group: SourceGroupModel) => {
     downloadTracklist(
       `${group.label.replace(/[^\w.-]+/g, '_')}.txt`,
-      group.tracks.map(
-        (track) =>
-          `${formatPosition(track.position)}  ${track.subtitle} - ${track.title}`
-      )
+      group.tracks.map(formatTracklistLine)
     );
   };
 
   const exportAll = () => {
-    downloadTracklist(
-      'library.txt',
-      flat.map((track) => `${track.subtitle} - ${track.title}`)
-    );
+    downloadTracklist('library.txt', flat.map(formatTrackName));
   };
 
   const toggleGroup = (key: string) => {
@@ -381,27 +376,48 @@ export function LibraryView({
 
   const allCollapsed = groups.length > 0 && collapsed.size >= groups.length;
 
+  const addSetForm = (
+    <AddSetForm
+      onAdded={(added) => {
+        setTracks((current) => [
+          ...current.filter(
+            (track) => !added.some((item) => item.id === track.id)
+          ),
+          ...added,
+        ]);
+        setView('by-source');
+        setQuery('');
+        setDownloadFilter('all');
+        setSourceSort('newest');
+      }}
+    />
+  );
+
   if (tracks.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center">
-        <p className="text-sm font-medium text-gray-900">
-          Nothing in your library yet
-        </p>
-        <p className="mt-1 text-sm text-gray-500">
-          Analyse a mix and the tracks it finds will be collected here.
-        </p>
-        <a
-          href="/dashboard"
-          className="mt-4 inline-block rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-        >
-          Analyse something
-        </a>
+      <div>
+        {addSetForm}
+        <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center">
+          <p className="text-sm font-medium text-gray-900">
+            Nothing in your library yet
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            Add a set with a tracklist, or analyse a mix to discover its tracks.
+          </p>
+          <a
+            href="/dashboard"
+            className="mt-4 inline-block rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+          >
+            Analyse something
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {addSetForm}
       <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-gray-50 px-1 pb-3 pt-1">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -610,10 +626,14 @@ export function LibraryView({
                     : undefined
                 }
                 onSkip={
-                  rowDownloads && item ? () => rowDownloads.skip(item) : undefined
+                  rowDownloads && item
+                    ? () => rowDownloads.skip(item)
+                    : undefined
                 }
                 onRetry={
-                  rowDownloads && item ? () => rowDownloads.retry(item) : undefined
+                  rowDownloads && item
+                    ? () => rowDownloads.retry(item)
+                    : undefined
                 }
               />
             );
