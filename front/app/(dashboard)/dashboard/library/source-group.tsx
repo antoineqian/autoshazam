@@ -6,6 +6,7 @@ import {
   CloudDownload,
   Download,
   FileAudio,
+  ListMusic,
   Link2,
   HelpCircle,
   Heart,
@@ -21,6 +22,7 @@ import type { ItemWithJob } from '@/lib/soulseek/use-soulseek-jobs';
 
 const KIND_ICON = {
   file: FileAudio,
+  manual: ListMusic,
   url: Link2,
   unknown: HelpCircle,
 } as const;
