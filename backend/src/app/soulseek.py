@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from ..infra.soulseek.config import load_config
-from ..infra.soulseek.jobs import DownloadManager, Item, Job, JobError, TrackRequest
+from ..infra.soulseek.jobs import DownloadManager, Item, Job, JobError, TrackRequest, MAX_DOWNLOAD_ATTEMPTS
 from ..infra.soulseek.matching import ALLOWED_FORMATS, Preferences, Scored
 
 router = APIRouter(prefix="/soulseek", tags=["soulseek"])
@@ -117,6 +117,8 @@ def serialize_item(item: Item) -> dict:
         "localPath": item.local_path,
         "error": item.error,
         "attempts": item.attempts,
+        "maxAttempts": MAX_DOWNLOAD_ATTEMPTS,
+        "attemptHistory": item.attempt_history,
         "candidates": [serialize_candidate(s) for s in item.candidates] if item.status == "review" else [],
         "chosen": serialize_candidate(item.chosen) if item.chosen else None,
     }
@@ -126,7 +128,7 @@ def serialize_job(job: Job) -> dict:
     return {
         "id": job.id,
         "createdAt": job.created_at.isoformat(),
-        "items": [serialize_item(i) for i in job.items],
+        "items": [{**serialize_item(i), "jobId": job.id} for i in job.items],
     }
 
 
@@ -160,7 +162,7 @@ async def read_job(job_id: str) -> dict:
 
 def _item_action(job_id: str, item_id: str, action) -> dict:
     try:
-        return serialize_item(action(get_manager(), job_id, item_id))
+        return {**serialize_item(action(get_manager(), job_id, item_id)), "jobId": job_id}
     except KeyError:
         raise HTTPException(status_code=404, detail="Job or item not found")
     except JobError as exc:

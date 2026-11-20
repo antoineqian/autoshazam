@@ -23,6 +23,7 @@ from .transport import (
     DownloadStalled,
     ProgressCallback,
     SearchFailed,
+    StateCallback,
     extension_of,
     split_remote_path,
 )
@@ -30,9 +31,9 @@ from .transport import (
 log = logging.getLogger(__name__)
 
 INCOMING_DIRNAME = ".incoming"
-# A peer that accepted our request but sent nothing for this long is treated
-# as unreachable (typically NAT on either side) and we move on.
+# Give established transfers more time than peers that have sent no bytes.
 STALL_TIMEOUT_SECONDS = 600.0
+FIRST_BYTE_TIMEOUT_SECONDS = 90.0
 POLL_SECONDS = 1.0
 
 
@@ -134,15 +135,27 @@ class AioslskTransport:
                 )
         return candidates
 
-    async def download(self, candidate: Candidate, on_progress: ProgressCallback) -> Path:
+    async def download(
+        self, candidate: Candidate, on_progress: ProgressCallback,
+        *, on_state: StateCallback | None = None,
+    ) -> Path:
+        last_progress_at = time.monotonic()
         try:
             client = self._require_client()
-            transfer = await client.transfers.download(candidate.username, candidate.remote_path)
+            transfer = await asyncio.wait_for(
+                client.transfers.download(candidate.username, candidate.remote_path),
+                timeout=FIRST_BYTE_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError as exc:
+            raise DownloadStalled(
+                f"{candidate.username}: download request timed out after "
+                f"{int(FIRST_BYTE_TIMEOUT_SECONDS)}s (state: requesting)"
+            ) from exc
         except Exception as exc:  # noqa: BLE001
             raise DownloadFailed(f"could not request download: {exc}") from exc
 
-        last_bytes = -1
-        last_progress_at = time.monotonic()
+        last_bytes = 0
+        received_data = False
         try:
             while True:
                 await asyncio.sleep(POLL_SECONDS)
@@ -150,6 +163,12 @@ class AioslskTransport:
                     raise DownloadFailed("Soulseek session ended during download; retry the track")
                 state = transfer.state.VALUE
                 done = transfer.bytes_transfered
+                received_data = received_data or done > 0
+                if on_state:
+                    on_state(
+                        state.name.lower(), done, transfer.filesize or candidate.filesize,
+                        getattr(transfer, "place_in_queue", None),
+                    )
                 if done != last_bytes:
                     last_bytes = done
                     last_progress_at = time.monotonic()
@@ -164,17 +183,20 @@ class AioslskTransport:
                     reason = transfer.fail_reason or transfer.abort_reason or state.name.lower()
                     raise DownloadFailed(f"{candidate.username}: {reason}")
 
-                if time.monotonic() - last_progress_at > STALL_TIMEOUT_SECONDS:
-                    await client.transfers.abort(transfer)
+                timeout = STALL_TIMEOUT_SECONDS if received_data else FIRST_BYTE_TIMEOUT_SECONDS
+                if time.monotonic() - last_progress_at > timeout:
                     raise DownloadStalled(
-                        f"{candidate.username}: no data for {int(STALL_TIMEOUT_SECONDS)}s"
+                        f"{candidate.username}: no {'more data' if received_data else 'first byte'} "
+                        f"for {int(timeout)}s (state: {state.name.lower()}, bytes: {done})"
                     )
         finally:
-            if transfer.is_finalized():
-                try:
-                    await client.transfers.remove(transfer)
-                except Exception:  # noqa: BLE001 - bookkeeping only
-                    log.debug("could not remove transfer %s", transfer.remote_path, exc_info=True)
+            # Bound cleanup too: a peer or library failure must not prevent fallback.
+            try:
+                if not transfer.is_finalized():
+                    await asyncio.wait_for(client.transfers.abort(transfer), timeout=5)
+                await asyncio.wait_for(client.transfers.remove(transfer), timeout=5)
+            except Exception:  # noqa: BLE001 - bookkeeping only
+                log.warning("could not clean up transfer %s", candidate.remote_path, exc_info=True)
 
     async def close(self) -> None:
         await self._drop_client()

@@ -56,6 +56,7 @@ class DownloadStalled(DownloadFailed):
 
 
 ProgressCallback = Callable[[int, int], None]  # (bytes_done, bytes_total)
+StateCallback = Callable[[str, int, int, int | None], None]
 
 
 class SoulseekTransport(Protocol):
@@ -64,7 +65,8 @@ class SoulseekTransport(Protocol):
     async def search(self, query: str, collect_seconds: float) -> list[Candidate]: ...
 
     async def download(
-        self, candidate: Candidate, on_progress: ProgressCallback
+        self, candidate: Candidate, on_progress: ProgressCallback,
+        *, on_state: StateCallback | None = None,
     ) -> Path: ...
 
     async def close(self) -> None: ...

@@ -31,6 +31,7 @@ export type Candidate = {
 
 export type Item = {
   id: string;
+  jobId?: string;
   title: string;
   subtitle: string;
   sourceLabel: string;
@@ -41,9 +42,28 @@ export type Item = {
   localPath: string | null;
   error: string | null;
   attempts: number;
+  maxAttempts?: number;
+  attemptHistory?: DownloadAttempt[];
   /** At most three, only meaningful while in review. */
   candidates: Candidate[];
   chosen: Candidate | null;
+};
+
+export type DownloadAttempt = {
+  run: number;
+  attempt: number;
+  peer: string;
+  remotePath: string;
+  advertisedQueueSize: number;
+  advertisedFreeSlots: boolean;
+  startedAt: string;
+  finishedAt: string | null;
+  state: string;
+  bytesReceived: number;
+  totalBytes: number;
+  queuePosition: number | null;
+  elapsedSeconds: number;
+  error: string | null;
 };
 
 export type Job = {

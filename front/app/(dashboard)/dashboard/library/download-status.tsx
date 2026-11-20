@@ -2,6 +2,7 @@
 
 import { RotateCcw } from 'lucide-react';
 import { DownloadReview } from './download-review';
+import { DownloadDiagnostics } from './download-diagnostics';
 import type { Candidate, Item } from '@/lib/soulseek/types';
 
 const PILL =
@@ -27,7 +28,9 @@ function label(item: Item): string {
     case 'matched':
       return 'Matched';
     case 'downloading':
-      return `Downloading ${Math.round((item.progress ?? 0) * 100)}%`;
+      return (item.progress ?? 0) > 0
+        ? `Downloading ${Math.round((item.progress ?? 0) * 100)}%`
+        : 'Waiting for peer';
     case 'review':
       return 'Review';
     case 'not_found':
@@ -75,21 +78,29 @@ export function DownloadStatus({
     (item.status === 'not_found' || item.status === 'failed') && onRetry;
 
   return (
-    <span
-      className={classes}
-      title={item.status === 'failed' ? item.error ?? undefined : undefined}
-    >
-      {label(item)}
-      {canRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          title="Search again with a broader query"
-          className="-mr-1 rounded-full p-0.5 hover:bg-red-100"
-        >
-          <RotateCcw className="h-3 w-3" />
-          <span className="sr-only">Retry</span>
-        </button>
+    <span className="inline-flex shrink-0 items-center gap-1">
+      <span
+        className={classes}
+        title={item.status === 'failed' ? item.error ?? undefined : undefined}
+      >
+        {label(item)}
+        {item.status === 'downloading' && item.attempts > 0 && (
+          <span>({item.attempts}/{item.maxAttempts ?? 3})</span>
+        )}
+        {canRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            title="Search again with a broader query"
+            className="-mr-1 rounded-full p-0.5 hover:bg-red-100"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span className="sr-only">Retry</span>
+          </button>
+        )}
+      </span>
+      {(item.status === 'downloading' || item.status === 'failed') && (
+        <DownloadDiagnostics item={item} />
       )}
     </span>
   );

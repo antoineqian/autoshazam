@@ -122,6 +122,42 @@ retry any tracks whose search or download was interrupted. If disconnects keep
 happening, check your connection and whether another Soulseek client is using
 the same account.
 
+### Investigate a waiting or failed download
+
+Before any audio arrives, the badge reads **Waiting for peer (1/3)**. The backend
+allows 90 seconds for the first byte, then tries another matching peer if one is
+available (at most three distinct peers per run). Once bytes arrive, the timeout
+is 10 minutes without further progress. A peer's advertised free slot does not
+guarantee an immediate transfer; its advertised queue size is not your position.
+
+Click the **Download details** info icon beside a waiting/downloading or failed
+badge to inspect the peer, transfer state, bytes, elapsed time and failures from
+earlier attempts. **Copy diagnostics** copies these details with the job/item IDs,
+query, timestamps and remote file paths. Retry preserves the last 30 attempts in
+the job's diagnostics, grouped by run. No extra notification is sent for each
+peer failure.
+
+The backend also writes JSON Lines to
+`<SOULSEEK_DOWNLOAD_DIR>/.diagnostics/soulseek.jsonl` (by default
+`backend/downloads/.diagnostics/soulseek.jsonl` when started with `./dev.sh`).
+Search outcomes, transfer state/queue-position changes, attempt outcomes and
+unexpected exception tracebacks are recorded with job/item IDs. This evidence
+survives backend restarts and the one-hour expiry of completed in-memory jobs.
+For a copied job ID, search the current file and its rotated backups:
+
+```sh
+rg 'YOUR_JOB_ID' backend/downloads/.diagnostics/soulseek.jsonl*
+```
+
+Logs rotate at 2 MiB, keeping two backups (about 6 MiB total); old evidence is
+eventually overwritten. They are local, owner-readable/writable files and contain
+track names, peer usernames and remote paths, so review before sharing. Account
+credentials and configuration are not included. Byte counts in the journal are
+snapshots at state changes and attempt completion, not a continuous packet log.
+If writing diagnostics fails, the backend reports a warning and continues the
+download. Existing jobs from a backend started before this change cannot acquire
+these diagnostics retroactively.
+
 ## Install and run frontend and backend using `docker-compose`
 
 If you have `docker` and `docker-compose` installed, it might be easier (and much lighter!) for you to simply build and run the containers:

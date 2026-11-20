@@ -7,6 +7,7 @@ not block the search loop.
 import asyncio
 import logging
 import time
+import traceback
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Literal, NamedTuple
 
 from . import files
+from .diagnostics import DownloadJournal
 from .matching import Decision, Preferences, Scored, Target, evaluate
 from .query import build_queries
 from .transport import DownloadFailed, SearchFailed, SoulseekTransport, TransportError
@@ -56,6 +58,8 @@ class Item:
     local_path: str | None = None
     error: str | None = None
     attempts: int = 0
+    run: int = 1
+    attempt_history: list[dict] = field(default_factory=list)
     # Every survivor of the last search, best first, so a failed download can
     # fall back to another peer without searching again. Not serialised.
     ranked: list[Scored] = field(default_factory=list, repr=False)
@@ -110,6 +114,7 @@ class DownloadManager:
         self._retention = retention_seconds
         self._sleep = sleep
         self._clock = clock
+        self._journal = DownloadJournal(download_dir)
 
         self.jobs: dict[str, Job] = {}
         self._queue: asyncio.Queue[tuple[Job, Item]] = asyncio.Queue()
@@ -135,6 +140,7 @@ class DownloadManager:
         )
         self.jobs[job.id] = job
         for item in job.items:
+            self._record("item_created", job, item)
             self._enqueue(job, item)
         return job
 
@@ -177,8 +183,11 @@ class DownloadManager:
         item.progress = None
         item.candidates = []
         item.chosen = None
+        item.attempts = 0
+        item.run += 1
         item.start_tier = 2
         job.finished_at = None
+        self._record("retry", job, item)
         self._enqueue(job, item)
         return item
 
@@ -189,6 +198,7 @@ class DownloadManager:
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
         await self._transport.close()
+        self._journal.close()
 
     async def wait_idle(self) -> None:
         """Test helper: block until every queued search and download is done."""
@@ -213,6 +223,7 @@ class DownloadManager:
                 log.exception("search failed for %s - %s", item.subtitle, item.title)
                 item.status = "failed"
                 item.error = str(exc)
+                self._record("item_failed", job, item, traceback=traceback.format_exc())
                 self._finish(job)
             finally:
                 self._queue.task_done()
@@ -235,12 +246,16 @@ class DownloadManager:
             if index:
                 await self._sleep(self._search_gap)
             item.query_used = query
+            self._record("search_started", job, item)
             try:
                 candidates = await self._transport.search(query, self._search_window)
             except SearchFailed as exc:
                 self._fail(job, item, str(exc))
                 return
             decision = evaluate(candidates, target, job.preferences)
+            self._record("search_finished", job, item,
+                         resultCount=len(candidates), eligibleCount=len(decision.ranked),
+                         decision=decision.status)
             if decision.status != "not_found":
                 break
 
@@ -258,6 +273,17 @@ class DownloadManager:
             self._spawn(self._download_item(job, item, _fallback_order(decision.ranked, item.chosen)))
 
     async def _download_item(self, job: Job, item: Item, ordered: list[Scored]) -> None:
+        try:
+            await self._try_downloads(job, item, ordered)
+        except asyncio.CancelledError:
+            self._fail(job, item, "Download interrupted by backend shutdown")
+            raise
+        except Exception as exc:  # A crashed background task must leave a terminal state.
+            log.exception("download crashed job=%s item=%s", job.id, item.id)
+            self._record("download_exception", job, item, traceback=traceback.format_exc())
+            self._fail(job, item, f"Unexpected download error: {type(exc).__name__}: {exc}")
+
+    async def _try_downloads(self, job: Job, item: Item, ordered: list[Scored]) -> None:
         async with self._downloads:
             tried: set[str] = set()
             last_error: str | None = None
@@ -274,16 +300,50 @@ class DownloadManager:
                 item.chosen = scored
                 item.status = "downloading"
                 item.progress = 0.0
+                started = self._clock()
+                attempt = {
+                    "run": item.run, "attempt": item.attempts,
+                    "peer": user, "remotePath": scored.candidate.remote_path,
+                    "advertisedQueueSize": scored.candidate.queue_size,
+                    "advertisedFreeSlots": scored.candidate.has_free_slots,
+                    "startedAt": datetime.now(timezone.utc).isoformat(),
+                    "finishedAt": None, "state": "requesting", "bytesReceived": 0,
+                    "totalBytes": scored.candidate.filesize, "queuePosition": None,
+                    "elapsedSeconds": 0.0, "error": None,
+                }
+                item.attempt_history.append(attempt)
+                # Full history stays in the bounded journal; cap polling payloads.
+                del item.attempt_history[:-30]
+                self._record("attempt_started", job, item, attempt=dict(attempt))
 
                 def on_progress(done: int, total: int) -> None:
                     item.progress = min(done / total, 1.0) if total else None
+                    attempt.update(bytesReceived=done, totalBytes=total)
+
+                def on_state(state: str, done: int, total: int, queue_position: int | None) -> None:
+                    changed = state != attempt["state"] or queue_position != attempt["queuePosition"]
+                    attempt.update(state=state, bytesReceived=done, totalBytes=total,
+                                   queuePosition=queue_position,
+                                   elapsedSeconds=round(self._clock() - started, 1))
+                    if changed:
+                        self._record("transfer_state", job, item, attempt=dict(attempt))
 
                 try:
-                    downloaded = await self._transport.download(scored.candidate, on_progress)
+                    downloaded = await self._transport.download(
+                        scored.candidate, on_progress, on_state=on_state
+                    )
                 except DownloadFailed as exc:
                     last_error = str(exc)
+                    attempt["error"] = last_error
                     log.info("download from %s failed: %s", user, exc)
                     continue
+                except BaseException as exc:
+                    attempt["error"] = f"{type(exc).__name__}: {exc}"
+                    raise
+                finally:
+                    attempt.update(finishedAt=datetime.now(timezone.utc).isoformat(),
+                                   elapsedSeconds=round(self._clock() - started, 1))
+                    self._record("attempt_finished", job, item, attempt=dict(attempt))
 
                 target = files.destination(
                     self._download_dir,
@@ -302,6 +362,7 @@ class DownloadManager:
                 item.local_path = str(target)
                 item.progress = 1.0
                 item.status = "done"
+                self._record("item_done", job, item)
                 self._finish(job)
                 return
 
@@ -323,7 +384,14 @@ class DownloadManager:
     def _fail(self, job: Job, item: Item, error: str) -> None:
         item.status = "failed"
         item.error = error
+        self._record("item_failed", job, item)
         self._finish(job)
+
+    def _record(self, event: str, job: Job, item: Item, **fields) -> None:
+        self._journal.record(
+            event, jobId=job.id, itemId=item.id, title=item.title, artist=item.subtitle,
+            query=item.query_used, run=item.run, status=item.status, error=item.error, **fields,
+        )
 
     def _finish(self, job: Job) -> None:
         if all(i.terminal for i in job.items):

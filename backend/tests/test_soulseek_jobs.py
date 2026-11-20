@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -52,7 +53,7 @@ class FakeTransport:
             raise result
         return list(result)
 
-    async def download(self, candidate, on_progress):
+    async def download(self, candidate, on_progress, *, on_state=None):
         self.downloads.append(candidate.username)
         outcome = self.outcomes.get(candidate.username)
         if outcome is not None:
@@ -137,6 +138,10 @@ async def test_failed_peer_falls_back_to_next_user(make_manager):
     assert item.status == "done"
     assert item.attempts == 2
     assert item.chosen.candidate.username == "b"
+    assert [a["peer"] for a in item.attempt_history] == ["a", "b"]
+    assert item.attempt_history[0]["error"] == "scripted failure"
+    assert item.attempt_history[1]["error"] is None
+    assert all(a["finishedAt"] for a in item.attempt_history)
 
 
 @pytest.mark.asyncio
@@ -239,3 +244,72 @@ async def test_shutdown_closes_transport(make_manager):
     await manager.wait_idle()
     await manager.shutdown()
     assert transport.closed
+
+
+@pytest.mark.asyncio
+async def test_unexpected_download_exception_is_terminal_and_journal_survives_expiry(make_manager, tmp_path):
+    manager, _ = make_manager(
+        results={"dj koze pick up": [cand(GOOD)]}, outcomes={"peer": RuntimeError},
+        retention_seconds=0,
+    )
+    job = manager.create_job(Preferences(), [KOZE])
+    await manager.wait_idle()
+    item = job.items[0]
+    assert item.status == "failed"
+    assert "RuntimeError" in item.error
+    assert "RuntimeError" in item.attempt_history[0]["error"]
+    assert manager.get_job(job.id) is None
+    await manager.shutdown()
+    events = [json.loads(line) for line in (tmp_path / ".diagnostics/soulseek.jsonl").read_text().splitlines()]
+    assert all(e["jobId"] == job.id and e["itemId"] == item.id for e in events)
+    crash = next(e for e in events if e["event"] == "download_exception")
+    assert "RuntimeError: scripted failure" in crash["traceback"]
+    assert events[-1]["event"] == "item_failed"
+
+
+@pytest.mark.asyncio
+async def test_retry_retains_previous_attempt_evidence(make_manager):
+    manager, transport = make_manager(
+        results={"dj koze pick up": [cand(GOOD)]}, outcomes={"peer": DownloadFailed},
+    )
+    job = manager.create_job(Preferences(), [KOZE])
+    await manager.wait_idle()
+    item = job.items[0]
+    transport.outcomes.clear()
+    manager.retry(job.id, item.id)
+    assert item.attempts == 0
+    await manager.wait_idle()
+    assert item.status == "done"
+    assert [a["run"] for a in item.attempt_history] == [1, 2]
+    assert item.attempt_history[0]["error"] == "scripted failure"
+
+
+@pytest.mark.asyncio
+async def test_diagnostic_write_failure_does_not_break_download(make_manager, tmp_path):
+    (tmp_path / ".diagnostics").write_text("not a directory")
+    manager, _ = make_manager(results={"dj koze pick up": [cand(GOOD)]})
+    job = manager.create_job(Preferences(), [KOZE])
+    await manager.wait_idle()
+    assert job.items[0].status == "done"
+
+
+@pytest.mark.asyncio
+async def test_state_diagnostics_are_live_but_journal_only_records_changes(make_manager, tmp_path):
+    manager, transport = make_manager(results={"dj koze pick up": [cand(GOOD)]})
+
+    async def stalled(candidate, on_progress, *, on_state):
+        for _ in range(5):
+            on_state("queued", 0, candidate.filesize, 10)
+        on_state("initializing", 0, candidate.filesize, None)
+        attempt = job.items[0].attempt_history[-1]
+        assert attempt["state"] == "initializing"
+        assert attempt["finishedAt"] is None
+        raise DownloadStalled("no first byte")
+
+    transport.download = stalled
+    job = manager.create_job(Preferences(), [KOZE])
+    await manager.wait_idle()
+    events = [json.loads(line) for line in (tmp_path / ".diagnostics/soulseek.jsonl").read_text().splitlines()]
+    states = [e["attempt"]["state"] for e in events if e["event"] == "transfer_state"]
+    assert states == ["queued", "initializing"]
+    assert job.items[0].attempt_history[-1]["error"] == "no first byte"
