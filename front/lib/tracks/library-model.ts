@@ -32,7 +32,7 @@ function collapseDetections(tracks: TrackWithSource[]): TrackWithSource[] {
   for (const track of tracks) {
     const key = identity(track);
     const seen = earliest.get(key);
-    if (!seen || track.position < seen.position) {
+    if (!seen || (track.position ?? Infinity) < (seen.position ?? Infinity)) {
       earliest.set(key, track);
     }
   }
@@ -99,10 +99,14 @@ export function groupBySource(
 
   const collapsed = [...groups.values()].map((group) => ({
     ...group,
-    // Timeline order is the only order that makes sense inside one mix.
-    tracks: collapseDetections(group.tracks).sort(
-      (a, b) => a.position - b.position
-    ),
+    tracks:
+      group.kind === 'manual'
+        ? [...group.tracks].sort(
+            (a, b) => (a.tracklistOrder ?? a.id) - (b.tracklistOrder ?? b.id)
+          )
+        : collapseDetections(group.tracks).sort(
+            (a, b) => (a.position ?? Infinity) - (b.position ?? Infinity)
+          ),
   }));
 
   const time = (group: SourceGroup) => group.createdAt?.getTime() ?? 0;
@@ -142,14 +146,32 @@ export function flattenUnique(
   });
 }
 
-export function formatPosition(minutes: number): string {
-  const total = Math.max(0, Math.round(minutes));
-  const hours = Math.floor(total / 60);
-  const mins = total % 60;
+export function formatPosition(minutes: number | null): string {
+  if (minutes === null) return '';
+  const total = Math.max(0, Math.round(minutes * 60));
+  const hours = Math.floor(total / 3600);
+  const mins = Math.floor(total / 60) % 60;
+  const seconds = String(total % 60).padStart(2, '0');
 
   return hours > 0
-    ? `${hours}:${String(mins).padStart(2, '0')}:00`
-    : `${mins}:00`;
+    ? `${hours}:${String(mins).padStart(2, '0')}:${seconds}`
+    : `${mins}:${seconds}`;
+}
+
+export function formatTrackName(track: {
+  title: string;
+  subtitle: string;
+}): string {
+  return track.subtitle ? `${track.subtitle} - ${track.title}` : track.title;
+}
+
+export function formatTracklistLine(track: {
+  title: string;
+  subtitle: string;
+  position: number | null;
+}): string {
+  const timestamp = formatPosition(track.position);
+  return `${timestamp ? `${timestamp}  ` : ''}${formatTrackName(track)}`;
 }
 
 export function formatRunDate(date: Date | null): string {

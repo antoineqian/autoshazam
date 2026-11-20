@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { sources, tracks } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { manualSetSchema } from './parse-tracklist';
 
 type TrackInput = {
   title: string;
@@ -52,6 +53,60 @@ async function isFavorited(teamId: number, track: TrackInput) {
     .where(and(matchingTrack(teamId, track), eq(tracks.favorited, true)))
     .limit(1);
   return Boolean(favorite);
+}
+
+/** A pasted set and all its tracks either save together or do not save at all. */
+export async function addManualSetAction(input: unknown) {
+  const { user, team } = await requireTeamAndUser();
+  const parsed = manualSetSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const result = await db.transaction(async (tx) => {
+    const existing = await tx
+      .select({
+        title: tracks.title,
+        subtitle: tracks.subtitle,
+        favorited: tracks.favorited,
+        downloaded: tracks.downloaded,
+      })
+      .from(tracks)
+      .where(eq(tracks.teamId, team.id));
+    const key = (track: { title: string; subtitle: string }) =>
+      JSON.stringify([track.title.toLowerCase(), track.subtitle.toLowerCase()]);
+    const favorites = new Set(
+      existing.filter((track) => track.favorited).map(key)
+    );
+    const downloaded = new Set(
+      existing.filter((track) => track.downloaded).map(key)
+    );
+    const [source] = await tx
+      .insert(sources)
+      .values({
+        teamId: team.id,
+        userId: user.id,
+        kind: 'manual',
+        label: parsed.data.title,
+      })
+      .returning();
+    const saved = await tx
+      .insert(tracks)
+      .values(
+        parsed.data.tracks.map((track, index) => ({
+          ...track,
+          teamId: team.id,
+          userId: user.id,
+          sourceId: source.id,
+          tracklistOrder: index,
+          favorited: favorites.has(key(track)),
+          downloaded: downloaded.has(key(track)),
+        }))
+      )
+      .returning();
+    return { source, tracks: saved };
+  });
+
+  revalidatePath('/dashboard/library');
+  return { data: result };
 }
 
 /** Opens a run. URL analyses call this first, then stream tracks into it. */
@@ -159,6 +214,7 @@ export async function saveAnalysisAction(input: {
  * points, so one visible row stands for several stored detections within that
  * run; all of them go. Detections of the same track in *other* runs are left
  * alone - those record what was genuinely in a different recording.
+ * Pasted entries are intentional, so only the selected occurrence is removed.
  */
 export async function deleteTrackAction(id: number) {
   const team = await getTeamForUser();
@@ -171,6 +227,7 @@ export async function deleteTrackAction(id: number) {
       title: tracks.title,
       subtitle: tracks.subtitle,
       sourceId: tracks.sourceId,
+      tracklistOrder: tracks.tracklistOrder,
     })
     .from(tracks)
     .where(and(eq(tracks.id, id), eq(tracks.teamId, team.id)))
@@ -189,7 +246,7 @@ export async function deleteTrackAction(id: number) {
   const deleted = await db
     .delete(tracks)
     .where(
-      target.sourceId === null
+      target.sourceId === null || target.tracklistOrder !== null
         ? and(sameTrack, eq(tracks.id, id))
         : and(sameTrack, eq(tracks.sourceId, target.sourceId))
     )

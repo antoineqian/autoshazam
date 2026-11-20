@@ -92,6 +92,25 @@ exists. Each computer still runs its own backend and needs internet access to
 use the shared database. To roll back, restore the original local `POSTGRES_URL`;
 new changes made in Supabase will not be present in the old local database.
 
+## Add a set from a tracklist
+
+In **Library → Add set**, enter a set title and paste one track per line, then
+choose **Review tracklist** and **Add to library**. Timestamps are optional:
+`06:27 Artist - Title`, `[1:02:03] Artist – Title`, numbered lists, and plain
+`Artist - Title` lines all work. Blank lines are ignored. Up to 500 tracks can
+be added at once.
+
+The preview lets you edit artist and title. Lines without a clear separator,
+such as `Main Phase Sunpetal`, stay together in the title so no words are lost;
+split them in the preview for more accurate artist matching, or keep them as-is.
+Pasted sets keep their original order, repeated tracks, and timestamp seconds.
+Untimed entries export without timestamps. Existing favourites and downloaded
+flags carry over when artist and title match. The usual library search, favourite,
+download, rename, delete and tracklist export controls work for these sets too.
+
+Apply database migrations with `cd front && npm run db:migrate` before running
+this version against an existing database.
+
 ## Downloading tracks from Soulseek (optional)
 
 The library can fetch the audio file of a detected track from the Soulseek network: a download icon on each track, and a "Download missing" button on each source. Beside it, "Download all favourited" fetches only that source’s favourited tracks that are missing and have no download in progress. The backend searches, keeps only the formats you allow (Settings › General › Soulseek downloads), scores every result against the artist and title, and downloads the best one on its own, or asks you to choose between at most three when it is not sure.
