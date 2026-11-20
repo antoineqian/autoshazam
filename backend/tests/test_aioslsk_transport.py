@@ -4,13 +4,14 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from aioslsk.events import EventBus, SessionDestroyedEvent
+from aioslsk.transfer.state import TransferState
 
 from backend.src.infra.soulseek import aioslsk_transport
 from backend.src.infra.soulseek.aioslsk_transport import AioslskTransport
 from backend.src.infra.soulseek.config import SoulseekConfig
 from backend.src.infra.soulseek.jobs import DownloadManager, TrackRequest
 from backend.src.infra.soulseek.matching import Preferences
-from backend.src.infra.soulseek.transport import DownloadFailed, SearchFailed
+from backend.src.infra.soulseek.transport import DownloadFailed, DownloadStalled, SearchFailed
 
 
 class FakeClient:
@@ -24,7 +25,7 @@ class FakeClient:
         self.searches = SimpleNamespace(
             search=AsyncMock(return_value=SimpleNamespace(results=[]))
         )
-        self.transfers = SimpleNamespace(download=AsyncMock())
+        self.transfers = SimpleNamespace(download=AsyncMock(), abort=AsyncMock(), remove=AsyncMock())
 
     async def _login(self):
         self.session = object()
@@ -59,6 +60,97 @@ async def test_reuses_only_a_live_session(transport):
     assert transport.connected
     assert transport._client is not client
     client.stop.assert_awaited_once()
+    await transport.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("received,seconds,message", [
+    (0, 91, "no first byte for 90s"),
+    (10, 601, "no more data for 600s"),
+])
+async def test_stall_timeout_records_state_and_cleans_up(transport, monkeypatch, received, seconds, message):
+    monkeypatch.setattr(aioslsk_transport, "POLL_SECONDS", 0)
+    ticks = iter([0, 0, 0, seconds] if received else [0, 0, seconds])
+    monkeypatch.setattr(aioslsk_transport, "time", SimpleNamespace(monotonic=lambda: next(ticks)))
+    await transport.connect()
+    client = transport._client
+    transfer = SimpleNamespace(
+        state=SimpleNamespace(VALUE=TransferState.QUEUED),
+        bytes_transfered=received, filesize=100, place_in_queue=12,
+        is_finalized=lambda: False,
+    )
+    client.transfers.download.return_value = transfer
+    observations = []
+    with pytest.raises(DownloadStalled, match=message):
+        await transport.download(
+            SimpleNamespace(username="peer", remote_path="track.flac", filesize=100),
+            lambda *_: None, on_state=lambda *args: observations.append(args),
+        )
+    assert observations[-1] == ("queued", received, 100, 12)
+    client.transfers.abort.assert_awaited_once_with(transfer)
+    client.transfers.remove.assert_awaited_once_with(transfer)
+    await transport.close()
+
+
+@pytest.mark.asyncio
+async def test_receiving_data_uses_longer_stall_timeout(transport, monkeypatch, tmp_path):
+    monkeypatch.setattr(aioslsk_transport, "POLL_SECONDS", 0)
+    ticks = iter([0, 0, 100])  # More than the first-byte limit, less than 600s.
+    monkeypatch.setattr(aioslsk_transport, "time", SimpleNamespace(monotonic=lambda: next(ticks)))
+    await transport.connect()
+    client = transport._client
+    states = iter([TransferState.DOWNLOADING, TransferState.COMPLETE])
+
+    class State:
+        @property
+        def VALUE(self):
+            return next(states)
+
+    transfer = SimpleNamespace(
+        state=State(), bytes_transfered=10, filesize=10,
+        local_path=str(tmp_path / "track.flac"), is_finalized=lambda: True,
+    )
+    client.transfers.download.return_value = transfer
+    path = await transport.download(
+        SimpleNamespace(username="peer", remote_path="track.flac", filesize=10), lambda *_: None,
+    )
+    assert path == tmp_path / "track.flac"
+    client.transfers.abort.assert_not_awaited()
+    client.transfers.remove.assert_awaited_once_with(transfer)
+    await transport.close()
+
+
+@pytest.mark.asyncio
+async def test_request_timeout_has_an_actionable_error(transport, monkeypatch):
+    await transport.connect()
+    monkeypatch.setattr(aioslsk_transport, "FIRST_BYTE_TIMEOUT_SECONDS", 0.01)
+    transport._client.transfers.download.side_effect = lambda *_: None
+
+    async def blocked_request(*_):
+        await asyncio.Event().wait()
+
+    transport._client.transfers.download.side_effect = blocked_request
+    with pytest.raises(DownloadStalled, match="download request timed out.*state: requesting"):
+        await transport.download(
+            SimpleNamespace(username="peer", remote_path="track.flac"), lambda *_: None,
+        )
+    await transport.close()
+
+
+@pytest.mark.asyncio
+async def test_cleanup_error_does_not_hide_peer_failure(transport, monkeypatch):
+    monkeypatch.setattr(aioslsk_transport, "POLL_SECONDS", 0)
+    await transport.connect()
+    transfer = SimpleNamespace(
+        state=SimpleNamespace(VALUE=TransferState.FAILED), bytes_transfered=0,
+        filesize=100, fail_reason="File not shared", is_finalized=lambda: True,
+    )
+    transport._client.transfers.download.return_value = transfer
+    transport._client.transfers.remove.side_effect = OSError("cleanup failed")
+    with pytest.raises(DownloadFailed, match="peer: File not shared"):
+        await transport.download(
+            SimpleNamespace(username="peer", remote_path="track.flac", filesize=100), lambda *_: None,
+        )
     await transport.close()
 
 

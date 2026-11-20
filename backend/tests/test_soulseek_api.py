@@ -91,6 +91,13 @@ def test_create_and_poll_job(client, favorited):
     assert path.as_posix().endswith(f"Late Night Mix/{prefix}DJ Koze - Pick Up.flac")
     assert path.read_bytes() == b"audio"
     assert polled["items"][0]["candidates"] == []  # only sent while reviewing
+    assert polled["items"][0]["jobId"] == job["id"]
+    assert polled["items"][0]["maxAttempts"] == 3
+    attempt = polled["items"][0]["attemptHistory"][0]
+    assert attempt["peer"] == "a"
+    assert attempt["remotePath"] == GOOD
+    assert attempt["bytesReceived"] == attempt["totalBytes"]
+    assert attempt["finishedAt"] is not None
 
 
 def test_validation_errors(client):
