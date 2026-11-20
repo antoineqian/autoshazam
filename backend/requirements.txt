@@ -6,7 +6,8 @@ websockets
 shazamio==0.8.1
 pydub
 socketio
-yt-dlp[default]
+# Includes the current YouTube clients; older installed versions can return 403.
+yt-dlp[default]>=2026.10.26
 aioslsk
 rapidfuzz
 python-dotenv
