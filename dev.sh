@@ -4,6 +4,17 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+admin_login=0
+case "${1:-}" in
+  "") ;;
+  --admin) admin_login=1 ;;
+  *) echo "Usage: ./dev.sh [--admin]" >&2; exit 1 ;;
+esac
+if [ "$#" -gt 1 ]; then
+  echo "Usage: ./dev.sh [--admin]" >&2
+  exit 1
+fi
+
 if [ ! -d backend/.venv ]; then
   echo "backend/.venv not found. Run: cd backend && python3.11 -m venv .venv && ./.venv/bin/pip install -r requirements.txt" >&2
   exit 1
@@ -63,11 +74,19 @@ fi
 trap 'kill 0' EXIT
 
 (cd backend && ./.venv/bin/python -m uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000) &
-(cd front && npm run dev) &
+if [ "$admin_login" = 1 ]; then
+  # Keep automatic owner access on this computer, never on the LAN.
+  (cd front && DEV_ADMIN_LOGIN=1 npm run dev -- --hostname 127.0.0.1) &
+else
+  (cd front && DEV_ADMIN_LOGIN=0 npm run dev) &
+fi
 
 echo "Backend:  http://localhost:8000/docs"
 echo "Frontend: http://localhost:3000"
-if [ "$database_mode" = "managed-local" ]; then
+if [ "$admin_login" = 1 ]; then
+  echo "Automatic admin login enabled: http://localhost:3000/dashboard"
+  echo "Uses DEV_ADMIN_EMAIL from front/.env (default: test@test.com). Restart without --admin to test login/logout."
+elif [ "$database_mode" = "managed-local" ]; then
   echo "Dev login: test@test.com / admin123 (active plan)"
 fi
 wait
