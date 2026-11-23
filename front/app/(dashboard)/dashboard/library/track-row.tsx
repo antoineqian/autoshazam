@@ -2,7 +2,7 @@
 
 import copy from 'clipboard-copy';
 import toast from 'react-hot-toast';
-import { Download, Heart } from 'lucide-react';
+import { Download, Heart, Youtube } from 'lucide-react';
 import AudioPlayer from '@/components/AudioPlayer';
 import { DownloadStatus } from './download-status';
 import { formatPosition } from '@/lib/tracks/library-model';
@@ -37,6 +37,10 @@ export function TrackRow({
   onSkip?: () => void;
   onRetry?: () => void;
 }) {
+  const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    `${track.subtitle} ${track.title}`.trim()
+  )}`;
+
   const copyToClipboard = () => {
     copy(`${track.subtitle} ${track.title}`);
     toast('Copied to clipboard');
@@ -139,6 +143,17 @@ export function TrackRow({
             <span className="sr-only">Open {track.title} in Shazam</span>
           </a>
         )}
+
+        <a
+          href={youtubeSearchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Search on YouTube"
+          className="rounded p-1.5 text-gray-600 hover:bg-red-100 hover:text-red-600"
+        >
+          <Youtube aria-hidden="true" className="h-4 w-4" />
+          <span className="sr-only">Search {track.title} on YouTube</span>
+        </a>
 
         <button
           type="button"
