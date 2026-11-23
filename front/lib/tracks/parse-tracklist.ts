@@ -16,7 +16,17 @@ export function parseTracklist(text: string): ParsedTrack[] {
     if (!line) return [];
 
     let position: number | null = null;
-    const timestamp = line.match(
+    // MixesDB style: "[006] Artist - Title [Label - CAT]", the number is the
+    // minute and the trailing brackets are always label and catalogue number.
+    const mixesDb = line.match(/^\[(\d{2,3})\]\s+(.*)$/);
+    if (mixesDb) {
+      position = Number(mixesDb[1]);
+      line = mixesDb[2].replace(/\s*\[[^\]]*\]$/, '').trim();
+      // "?" marks an unidentified track: nothing to search for.
+      if (!line || /^\?+$/.test(line)) return [];
+    }
+
+    const timestamp = mixesDb ? null : line.match(
       /^(?:\[(\d{1,3}:\d{2}(?::\d{2})?)\]|\((\d{1,3}:\d{2}(?::\d{2})?)\)|(\d{1,3}:\d{2}(?::\d{2})?))(?=\s|$)/
     );
     if (timestamp) {

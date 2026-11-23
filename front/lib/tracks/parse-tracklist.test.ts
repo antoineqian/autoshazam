@@ -218,3 +218,33 @@ test('export preserves seconds after PostgreSQL real precision and omits absent 
     'Main Phase Sunpetal'
   );
 });
+
+const mixesDb = `[000] Speedy J - Symmetry [Warp - LP 23]
+[009] Scott Garcia - Waiting (Dub Monsters Mix) [Underground Connection - UC01]
+[020] Splash Pattern - Hammervand [Not On]
+[024] /DL/MS/ - Scylla [TRUST - 40]
+[084] Baby D - (Everybody's Got To Learn Sometime) I Need Your Loving [Systematic - SYSX 1111]
+[093] ?
+[101] Blackstreet - No Diggity (Aphrodite Vocal Mix) [Not On - RO 001]
+[105] ?
+[113] The Capris - There's A Moon Out Tonight [Planet Co - P-1010]`;
+
+test('imports MixesDB lists: minute markers, label brackets stripped, unknown tracks skipped', () => {
+  const tracks = parseTracklist(mixesDb);
+  assert.deepEqual(tracks, [
+    { subtitle: 'Speedy J', title: 'Symmetry', position: 0 },
+    { subtitle: 'Scott Garcia', title: 'Waiting (Dub Monsters Mix)', position: 9 },
+    { subtitle: 'Splash Pattern', title: 'Hammervand', position: 20 },
+    { subtitle: '/DL/MS/', title: 'Scylla', position: 24 },
+    {
+      subtitle: 'Baby D',
+      title: "(Everybody's Got To Learn Sometime) I Need Your Loving",
+      position: 84,
+    },
+    { subtitle: 'Blackstreet', title: 'No Diggity (Aphrodite Vocal Mix)', position: 101 },
+    { subtitle: 'The Capris', title: "There's A Moon Out Tonight", position: 113 },
+  ]);
+  assert.equal(formatPosition(tracks[6].position), '1:53:00');
+  // Brackets outside the MixesDB format are part of the title.
+  assert.equal(parseTracklist('TEACHI - 湧ヶ峰 [WAKUGAMINE]')[0].title, '湧ヶ峰 [WAKUGAMINE]');
+});
