@@ -2,10 +2,25 @@ import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
 import { activityLogs, sources, teamMembers, teams, tracks, users } from './schema';
 import type { TrackWithSource } from './schema';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
+import { devAdminEmail } from '@/lib/auth/dev-admin';
 
 export async function getUser() {
+  const adminEmail = devAdminEmail((await headers()).get('host'));
+  if (adminEmail) {
+    const [admin] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, adminEmail), eq(users.role, 'owner'), isNull(users.deletedAt)))
+      .limit(1);
+
+    if (!admin) {
+      throw new Error('Dev admin account not found or not an active owner. Set DEV_ADMIN_EMAIL to an existing owner in front/.env, or restart without --admin.');
+    }
+    return admin;
+  }
+
   const sessionCookie = (await cookies()).get('session');
   if (!sessionCookie || !sessionCookie.value) {
     return null;

@@ -12,6 +12,7 @@
     "db:check": "npx tsx lib/db/check.ts",
     "db:test": "npx tsx --test lib/db/config.test.ts",
     "tracks:test": "npx tsx --test lib/tracks/*.test.ts",
+    "auth:test": "npx tsx --test lib/auth/dev-admin.test.ts",
     "db:copy-library": "npx tsx lib/db/copy-library.ts",
     "db:studio": "drizzle-kit studio"
   },
