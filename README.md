@@ -9,6 +9,21 @@ First, install the required node packages. We need to use `-f` since there are s
 
 `npm run dev`
 
+### Skip login during local development
+
+Run `./dev.sh --admin` and open `http://localhost:3000/dashboard` to use the
+existing `test@test.com` owner account automatically. For another account (including
+on a shared Supabase database), set `DEV_ADMIN_EMAIL=you@example.com` in `front/.env`.
+The account must already be an owner and must not be deleted. The shortcut does
+not create an account or change its role, team, password, or plan; the usual local
+demo-account setup still runs when using the managed local database.
+
+The flag binds the frontend to `127.0.0.1`. Automatic login requires development
+mode, the script's server-only flag, and a localhost request. It takes precedence
+over existing session cookies and does not issue a session cookie. To test normal
+login/logout or switch users, restart with `./dev.sh` without `--admin`.
+Plain `npm run dev` does not enable the shortcut, and production ignores the flag.
+
 ## Install and run the backend
 
 Using `python3.11`, install the requirements (note that this includes `yt-dlp` to be able to use `autoshazam` with URLs, which will require `ffmpeg` to be installed in order to function properly):
