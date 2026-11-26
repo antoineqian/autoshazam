@@ -126,6 +126,25 @@ download, rename, delete and tracklist export controls work for these sets too.
 Apply database migrations with `cd front && npm run db:migrate` before running
 this version against an existing database.
 
+## Compare a detection with the original audio
+
+In Analysis and Library, **Original** beside the Shazam button plays up to 30
+seconds from the displayed detection timestamp in the input file. Click again
+to pause; playing a Shazam preview or another original excerpt pauses the current
+audio. Excerpts are saved for new file, folder, and URL analyses, including the
+shorter final sample at the end of a recording.
+New detection timestamps point to the sample Shazam actually fingerprints (near
+the middle of intervals longer than 36 seconds), rather than the interval's start.
+
+Apply the database migration (`cd front && npm run db:migrate`) before running
+this version. Older results and pasted tracklists show a disabled Original button
+because they have no saved audio; analyzing the file or URL again creates clips.
+Clips live in `backend/storage/original-clips` when using `dev.sh`, and remain
+available after restarting the backend. They are local files, so a shared database
+does not make them available on another computer. Keep that folder when moving
+the library. Deleting library entries does not delete clips; removing clips from
+disk makes their playback unavailable. Each excerpt takes about 480 KB at most.
+
 ## Downloading tracks from Soulseek (optional)
 
 The library can fetch the audio file of a detected track from the Soulseek network: a download icon on each track, and a "Download missing" button on each source. Beside it, "Download all favourited" fetches only that source’s favourited tracks that are missing and have no download in progress. The backend searches, keeps only the formats you allow (Settings › General › Soulseek downloads), scores every result against the artist and title, and downloads the best one on its own, or asks you to choose between at most three when it is not sure.
@@ -206,7 +225,7 @@ Just to give you an idea, thanks to multi-stage Docker building and slim package
 
 # Future updates
 - Persistent results
-- Audio controls on the original file for each result for easier comparison
+- ~~Audio controls on the original file for each result for easier comparison~~
 - Scrap youtube url from shazam info page
 - Tests !
 - ~~Containerize~~

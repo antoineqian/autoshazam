@@ -2,7 +2,12 @@ from shazamio import Shazam
 from pydub import AudioSegment
 import time
 import asyncio
+import logging
 from math import ceil
+from .original_audio import recognition_offset_ms, save_original_clip
+
+logger = logging.getLogger(__name__)
+_clip_semaphore = asyncio.Semaphore(2)
 
 # Shazam's endpoint throttles bursts, so we cap how many segments are
 # recognized at once instead of firing the whole set concurrently.
@@ -61,6 +66,15 @@ def _parse_track(ret, position):
 async def shazam_segment(segment, position):
     ret = await _recognize(segment, position)
     track_info = _parse_track(ret, position)
+    if track_info is not None:
+        offset = await asyncio.to_thread(recognition_offset_ms, segment)
+        track_info['position'] = (position + offset) / 60 / 1000
+        try:
+            async with _clip_semaphore:
+                track_info['originalClipId'] = await asyncio.to_thread(save_original_clip, segment, offset)
+        except Exception:
+            # A disk/encoder problem must not discard an identified track.
+            logger.exception('Could not save original audio at %s ms', position)
     if track_info is None and ret is not None:
         print(f"Didn't recognize at {position}")
     return track_info
@@ -101,8 +115,7 @@ async def shazam_file(filename, interval):
 
 
 async def shazam_segment_ws(segment, position, websocket):
-    ret = await _recognize(segment, position)
-    track_info = _parse_track(ret, position)
+    track_info = await shazam_segment(segment, position)
     if track_info is not None:
         print(f"sending {track_info['subtitle']}")
         await websocket.send_json(track_info)

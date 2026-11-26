@@ -94,6 +94,8 @@ export const tracks = pgTable('tracks', {
   fileIndex: integer('file_index').notNull().default(0),
   url: text('url'),
   uri: text('uri'),
+  // Opaque backend ID for a retained excerpt from this detection's input audio.
+  originalClipId: varchar('original_clip_id', { length: 32 }),
   // Whether this track has been added to the user's own collection. Held per
   // row but kept identical across every row of the same track, since owning a
   // file is a fact about the track, not about the mix it turned up in.

@@ -1,0 +1,1 @@
+ALTER TABLE "tracks" ADD COLUMN "original_clip_id" varchar(32);

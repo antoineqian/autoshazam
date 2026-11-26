@@ -158,6 +158,7 @@ function row(
     fileIndex: 0,
     url: null,
     uri: null,
+    originalClipId: null,
     downloaded: false,
     favorited: false,
     createdAt: new Date(0),

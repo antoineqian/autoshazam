@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { formatPosition } from '@/lib/tracks/library-model';
 import AudioPlayer from './AudioPlayer';
+import OriginalAudioPlayer from './OriginalAudioPlayer';
 
 /** @param {{ tracks: any[], deleteTrack: (id: number) => void, reset?: () => void, busy?: boolean }} props */
 export default function ListTracks({
@@ -138,7 +139,7 @@ export default function ListTracks({
                   {track.subtitle}
                 </p>
               </div>
-              <div className="ml-auto flex items-center gap-0.5">
+              <div className="ml-auto flex w-full items-center justify-end gap-0.5 sm:w-auto">
                 {track.uri && <AudioPlayer audioSrc={track.uri} />}
                 {track.url && (
                   <Button
@@ -158,6 +159,7 @@ export default function ListTracks({
                     </a>
                   </Button>
                 )}
+                <OriginalAudioPlayer track={track} />
                 <Button
                   variant="ghost"
                   size="icon"
