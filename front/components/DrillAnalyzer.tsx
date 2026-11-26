@@ -36,7 +36,7 @@ export default function DrillAnalyzer() {
     const source = await pendingSource.current;
     if (!source) throw new Error('The analysis source was not saved.');
     const saved = await saveTrackAction({ ...parsed, sourceId: source.id });
-    setTracks((prevTracks) => [...prevTracks, saved]);
+    setTracks((prevTracks) => [...prevTracks, { ...saved, source }]);
   };
 
   // Called once with the full batch of detected tracks (file/folder mode). One
@@ -60,7 +60,7 @@ export default function DrillAnalyzer() {
         }),
       ),
     );
-    setTracks(runs.flatMap((run) => run.tracks));
+    setTracks(runs.flatMap((run) => run.tracks.map((track) => ({ ...track, source: run.source }))));
     return runs.reduce((count, run) => count + run.tracks.length, 0);
   };
 

@@ -8,7 +8,7 @@ import { getTeamForUser } from '@/lib/db/queries';
 import { recoveredClipsSchema, sameRecoveryRecording } from './original-recovery';
 import type { RecoveryContext } from './original-recovery';
 
-async function getRecording(trackId: number) {
+async function getRecording(trackId: number, includeSiblings = false) {
   if (!Number.isInteger(trackId) || trackId < 1) throw new Error('Invalid track.');
   const team = await getTeamForUser();
   if (!team) throw new Error('Sign in to restore original audio.');
@@ -16,11 +16,11 @@ async function getRecording(trackId: number) {
     .leftJoin(sources, and(eq(tracks.sourceId, sources.id), eq(sources.teamId, team.id)))
     .where(and(eq(tracks.teamId, team.id), eq(tracks.id, trackId))).limit(1);
   if (!row) throw new Error('This track is no longer in your library.');
-  const recording = await db.select().from(tracks).where(and(
+  const recording = includeSiblings ? await db.select().from(tracks).where(and(
     eq(tracks.teamId, team.id),
     row.track.sourceId === null ? eq(tracks.id, trackId) : eq(tracks.sourceId, row.track.sourceId),
     eq(tracks.fileIndex, row.track.fileIndex),
-  ));
+  )) : [row.track];
   return { ...row, recording, team };
 }
 
@@ -37,7 +37,7 @@ export async function getOriginalRecoveryAction(trackId: number): Promise<Recove
 
 export async function saveOriginalRecoveryAction(trackId: number, input: unknown) {
   const clips = recoveredClipsSchema.parse(input);
-  const { track, recording, team } = await getRecording(trackId);
+  const { track, recording, team } = await getRecording(trackId, true);
   const eligible = new Set(recording.filter((row) =>
     sameRecoveryRecording(track, row) && row.position !== null,
   ).map((row) => row.id));

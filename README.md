@@ -137,11 +137,21 @@ New detection timestamps point to the sample Shazam actually fingerprints (near
 the middle of intervals longer than 36 seconds), rather than the interval's start.
 
 Apply the database migration (`cd front && npm run db:migrate`) before running
-this version. For older results without excerpts, click **Original** and choose
-**Use saved source URL**, or select the original audio file and **Restore from
-file**. This enables playback for the existing timed tracks in that recording
-without running Shazam again or duplicating library entries. Restoration uses
-the saved timestamps; older detections may still point to an interval's start.
+this version. For older results without excerpts, click **Original** to play.
+Saved URLs prepare only the selected track's 30-second excerpt, then start
+playback automatically. Downloads indexed by this version are reused locally;
+otherwise the downloader requests just the selected time range. A slow host can
+still take time; click the loading button to cancel. The excerpt is cached and
+saved to that track for future playback. Other tracks are prepared only on click.
+
+For local files, **Original** opens the file picker and plays directly from the
+selected recording at the saved timestamp, with no upload or conversion. One
+selection covers all tracks from that recording during the current page session,
+including navigation between app views. Select it again after a full page reload.
+The format must be supported by your browser (MP3 and WAV are good choices).
+If a saved URL fails, click Original again to select the file instead.
+
+Playback uses the saved timestamps; older detections may still point to an interval's start.
 Entries without timestamps remain disabled. Previously uploaded files were
 deleted after analysis, so they must be selected again if no source URL was saved.
 Clips live in `backend/storage/original-clips` when using `dev.sh`, and remain
