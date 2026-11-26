@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
+from pydub import AudioSegment
 
 from backend.src.app import main
 from backend.src.infra import shazam
@@ -17,7 +18,9 @@ def analysis(monkeypatch):
         return '/tmp/Example Mix.mp3'
 
     monkeypatch.setattr(main, '_fetch_media', fetch)
-    monkeypatch.setattr(shazam, '_segments', AsyncMock(return_value=[(b'a', 0), (b'b', 60000)]))
+    sample = AudioSegment.silent(duration=1000)
+    monkeypatch.setattr(shazam, '_segments', AsyncMock(return_value=[(sample, 0), (sample, 60000)]))
+    monkeypatch.setattr(shazam, 'save_original_clip', lambda *_: 'a' * 32)
 
     async def recognize(segment, position):
         if position:
@@ -54,6 +57,7 @@ def test_download_preparation_and_every_sample_are_reported(analysis):
     assert all(m['total'] == 2 for m in samples)
     assert next(m for m in messages if m.get('type') == 'source')['label'] == 'Example Mix'
     assert len([m for m in messages if 'title' in m]) == 1
+    assert next(m for m in messages if 'title' in m)['originalClipId'] == 'a' * 32
     assert messages[-1] == {'type': 'complete', 'failedSegments': 0}
 
 

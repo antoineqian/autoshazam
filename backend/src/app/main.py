@@ -1,17 +1,20 @@
 import asyncio
 import os
 import time
+import tempfile
 from urllib.parse import urlparse
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Form, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from yt_dlp import YoutubeDL
 
 from ..infra.downloader import build_ydl_opts
 from ..infra.processor import PathWriter
 from ..infra.shazam import shazam_file, shazam_file_ws
+from ..infra.original_audio import clip_path
 from .soulseek import router as soulseek_router, shutdown_manager
 
 
@@ -34,6 +37,14 @@ app.add_middleware(
 )
 
 app.include_router(soulseek_router)
+
+
+@app.get('/original-audio/{clip_id}')
+async def original_audio(clip_id: str):
+    path = clip_path(clip_id)
+    if path is None:
+        raise HTTPException(status_code=404, detail='Original audio is not available on this computer.')
+    return FileResponse(path, media_type='audio/mpeg')
 
 
 def _fetch_media(url: str, progress=None) -> str:
@@ -81,9 +92,11 @@ async def processFolder(files: list[UploadFile] = File(...), interval: int = For
         storage_dir = os.path.normpath(os.path.join(os.getcwd(), "storage"))
         if not os.path.exists(storage_dir):
             os.makedirs(storage_dir)
-        file_location = os.path.join(storage_dir, "tmp")
-        await asyncio.to_thread(Path(file_location).write_bytes, contents)
+        # Concurrent uploads (including identical filenames) need separate inputs.
+        with tempfile.NamedTemporaryFile(dir=storage_dir, delete=False) as temporary:
+            file_location = temporary.name
         try:
+            await asyncio.to_thread(Path(file_location).write_bytes, contents)
             results = await shazam_file(file_location, interval)
             for r in results:
                 r["fileIndex"] = i

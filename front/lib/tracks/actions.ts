@@ -14,6 +14,7 @@ type TrackInput = {
   fileIndex?: number;
   url?: string;
   uri?: string;
+  originalClipId?: string;
 };
 
 type SourceInput = {
@@ -146,6 +147,7 @@ export async function saveTrackAction(input: TrackInput & { sourceId?: number })
       fileIndex: input.fileIndex ?? 0,
       url: input.url,
       uri: input.uri,
+      originalClipId: input.originalClipId,
       favorited,
     })
     .returning();
@@ -196,6 +198,7 @@ export async function saveAnalysisAction(input: {
             fileIndex: track.fileIndex ?? 0,
             url: track.url,
             uri: track.uri,
+            originalClipId: track.originalClipId,
             favorited: favoriteKeys.has(favoriteKey(track)),
           }))
         )

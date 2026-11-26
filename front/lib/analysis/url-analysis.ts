@@ -32,6 +32,7 @@ export type AnalysisRecord =
       position: number;
       url?: string;
       uri?: string;
+      originalClipId?: string;
     };
 
 /** Backend completion and database completion are separate: keep the run busy

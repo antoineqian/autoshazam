@@ -51,6 +51,7 @@ test('completion waits for source and track writes while progress stays live', a
     onProgress: (p) => stages.push(p.stage),
     onRecord: async (record) => {
       if (record.type === 'source') await gate;
+      else assert.equal(record.originalClipId, 'a'.repeat(32));
       written.push(record.type ?? 'track');
     },
   }).then((result) => {
@@ -68,7 +69,7 @@ test('completion waits for source and track writes while progress stays live', a
     completed: 2,
     total: 4,
   });
-  socket.message({ title: 'Track', subtitle: 'Artist', position: 0 });
+  socket.message({ title: 'Track', subtitle: 'Artist', position: 0, originalClipId: 'a'.repeat(32) });
   socket.message({ type: 'complete', failedSegments: 1 });
   socket.close();
   await setImmediate();

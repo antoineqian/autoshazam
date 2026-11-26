@@ -4,6 +4,7 @@ import copy from 'clipboard-copy';
 import toast from 'react-hot-toast';
 import { Download, Heart, Youtube } from 'lucide-react';
 import AudioPlayer from '@/components/AudioPlayer';
+import OriginalAudioPlayer from '@/components/OriginalAudioPlayer';
 import { DownloadStatus } from './download-status';
 import { formatPosition } from '@/lib/tracks/library-model';
 import type { TrackWithSource } from '@/lib/db/schema';
@@ -55,7 +56,7 @@ export function TrackRow({
   const showDownload = !track.downloaded && onDownload && !showBadge;
 
   return (
-    <li className="flex items-center gap-2 px-3 py-2 rounded-md sm:gap-3 hover:bg-gray-50 group">
+    <li className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-md sm:flex-nowrap sm:gap-3 hover:bg-gray-50 group">
       <input
         type="checkbox"
         // Always a boolean so the input stays controlled: client state can
@@ -128,7 +129,7 @@ export function TrackRow({
         />
       </button>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+      <div className="ml-auto flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         {track.uri && <AudioPlayer audioSrc={track.uri} />}
 
         {track.url && (
@@ -143,6 +144,8 @@ export function TrackRow({
             <span className="sr-only">Open {track.title} in Shazam</span>
           </a>
         )}
+
+        <OriginalAudioPlayer track={track} />
 
         <a
           href={youtubeSearchUrl}
