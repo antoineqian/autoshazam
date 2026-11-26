@@ -17,6 +17,7 @@ from ..infra.downloader import build_ydl_opts
 from ..infra.processor import PathWriter
 from ..infra.shazam import shazam_file, shazam_file_ws
 from ..infra.original_audio import clip_path, restore_original_clips
+from ..infra.original_preview import prepare_url_preview, remember_original
 from .soulseek import router as soulseek_router, shutdown_manager
 
 
@@ -76,7 +77,25 @@ def _fetch_media(url: str, progress=None) -> str:
         ydl.download(url)
     if not paths:
         raise ValueError('No audio file was downloaded')
+    remember_original(url, paths[-1])
     return paths[-1]
+
+
+class PreviewInput(BaseModel):
+    url: str = Field(max_length=8192)
+    position: float = Field(ge=0, allow_inf_nan=False)
+
+
+@app.post('/original-audio/preview')
+async def preview_original(input: PreviewInput):
+    source = urlparse(input.url)
+    if source.scheme not in ('http', 'https') or not source.hostname:
+        raise HTTPException(status_code=422, detail='The source URL must use http or https.')
+    try:
+        clip_id = await asyncio.to_thread(prepare_url_preview, input.url, input.position)
+        return {'originalClipId': clip_id}
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail='Could not play this source URL. Choose the original file instead.') from exc
 
 
 class RecoveryPoint(BaseModel):
