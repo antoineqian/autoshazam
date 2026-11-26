@@ -137,8 +137,13 @@ New detection timestamps point to the sample Shazam actually fingerprints (near
 the middle of intervals longer than 36 seconds), rather than the interval's start.
 
 Apply the database migration (`cd front && npm run db:migrate`) before running
-this version. Older results and pasted tracklists show a disabled Original button
-because they have no saved audio; analyzing the file or URL again creates clips.
+this version. For older results without excerpts, click **Original** and choose
+**Use saved source URL**, or select the original audio file and **Restore from
+file**. This enables playback for the existing timed tracks in that recording
+without running Shazam again or duplicating library entries. Restoration uses
+the saved timestamps; older detections may still point to an interval's start.
+Entries without timestamps remain disabled. Previously uploaded files were
+deleted after analysis, so they must be selected again if no source URL was saved.
 Clips live in `backend/storage/original-clips` when using `dev.sh`, and remain
 available after restarting the backend. They are local files, so a shared database
 does not make them available on another computer. Keep that folder when moving
