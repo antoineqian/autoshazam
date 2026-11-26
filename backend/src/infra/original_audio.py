@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from uuid import uuid4
 from shazamio.converter import Converter
+from pydub import AudioSegment
 
 CLIP_DURATION_MS = 30_000
 
@@ -45,3 +46,25 @@ def save_original_clip(segment, start: int | None = None) -> str:
         path.unlink(missing_ok=True)
         raise
     return clip_id
+
+
+def restore_original_clips(filename: str, points: list[dict]) -> list[dict]:
+    """Recover clips at existing timestamps without calling recognition again."""
+    audio = AudioSegment.from_file(filename)
+    starts = [round(point['position'] * 60_000) for point in points]
+    if any(start >= len(audio) for start in starts):
+        raise ValueError('This audio is shorter than the saved timestamps. Choose the original recording.')
+    restored = []
+    try:
+        for point, start in zip(points, starts):
+            # Existing positions may be legacy interval starts or exact new
+            # fingerprint starts. Preserve them; never add a guessed offset.
+            clip_id = save_original_clip(audio, start)
+            restored.append({'id': point['id'], 'originalClipId': clip_id})
+    except Exception:
+        for clip in restored:
+            path = clip_path(clip['originalClipId'])
+            if path:
+                path.unlink(missing_ok=True)
+        raise
+    return restored

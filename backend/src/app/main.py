@@ -2,6 +2,7 @@ import asyncio
 import os
 import time
 import tempfile
+from typing import Annotated
 from urllib.parse import urlparse
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -10,11 +11,12 @@ from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from yt_dlp import YoutubeDL
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from ..infra.downloader import build_ydl_opts
 from ..infra.processor import PathWriter
 from ..infra.shazam import shazam_file, shazam_file_ws
-from ..infra.original_audio import clip_path
+from ..infra.original_audio import clip_path, restore_original_clips
 from .soulseek import router as soulseek_router, shutdown_manager
 
 
@@ -75,6 +77,54 @@ def _fetch_media(url: str, progress=None) -> str:
     if not paths:
         raise ValueError('No audio file was downloaded')
     return paths[-1]
+
+
+class RecoveryPoint(BaseModel):
+    id: int = Field(gt=0, strict=True)
+    position: float = Field(ge=0, allow_inf_nan=False)
+
+
+@app.post('/original-audio/restore')
+async def restore_audio(
+    points: str = Form(..., max_length=200_000),
+    file: UploadFile | None = File(None),
+    url: str | None = Form(None),
+):
+    try:
+        parsed = TypeAdapter(Annotated[list[RecoveryPoint], Field(min_length=1, max_length=2000)]).validate_json(points)
+        if len({p.id for p in parsed}) != len(parsed):
+            raise ValueError('Duplicate tracks')
+    except (ValidationError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail='Choose tracks with valid saved timestamps.') from exc
+    if (file is None) == (not url):
+        raise HTTPException(status_code=422, detail='Choose either the original file or its source URL.')
+    if url:
+        source = urlparse(url)
+        if source.scheme not in ('http', 'https') or not source.hostname:
+            raise HTTPException(status_code=422, detail='The source URL must use http or https.')
+
+    # Uploaded recovery inputs are temporary. Only the resulting clips persist.
+    try:
+        with tempfile.TemporaryDirectory(prefix='autoshazam-recovery-') as directory:
+            if file is not None:
+                filename = str(Path(directory) / 'audio')
+                with open(filename, 'wb') as output:
+                    while chunk := await file.read(1024 * 1024):
+                        await asyncio.to_thread(output.write, chunk)
+            else:
+                try:
+                    filename = await asyncio.to_thread(_fetch_media, url)
+                except Exception as exc:
+                    raise HTTPException(status_code=422, detail='Could not fetch the saved URL. Try selecting the original file instead.') from exc
+            try:
+                return await asyncio.to_thread(restore_original_clips, filename, [p.model_dump() for p in parsed])
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            except Exception as exc:
+                raise HTTPException(status_code=422, detail='Could not restore audio. Check the file format and available disk space.') from exc
+    finally:
+        if file is not None:
+            await file.close()
 
 
 @app.post("/processFolder")
